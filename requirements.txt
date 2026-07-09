@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+langgraph
+litellm
+python-dotenv
+firebase-admin
+sqlalchemy
+alembic
+paho-mqtt
+pydantic
+pydantic-settings
+psycopg2-binary
+asyncpg
+websockets
+pytest
+pytest-asyncio
+httpx
