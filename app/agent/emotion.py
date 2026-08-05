@@ -1,2 +1,3 @@
-# TODO(agent-emotion-branch): Normalize camera-inferred emotion signals into
-# agent events. The ESP32-CAM should stay deterministic and send only observations.
+def get_current_emotion(session_id: str) -> str:
+    # TODO: Replace with real camera/audio-based inference in a later phase.
+    return "neutral"

@@ -8,7 +8,8 @@ from dotenv import load_dotenv
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(BASE_DIR / ".env")
+load_dotenv(BASE_DIR / ".env.example")
+load_dotenv(BASE_DIR / ".env", override=True)
 
 
 def _as_bool(value: str | None, default: bool = False) -> bool:
@@ -30,7 +31,7 @@ class Settings:
     environment: str = "development"
     debug: bool = True
 
-    database_url: str = "postgresql+psycopg://postgres:postgres@localhost:5432/rufus"
+    database_url: str = "postgresql+psycopg2://postgres:postgres@localhost:5432/rufus"
     create_db_tables_on_startup: bool = False
 
     firebase_project_id: Optional[str] = None
@@ -38,11 +39,17 @@ class Settings:
 
     mqtt_host: str = "localhost"
     mqtt_port: int = 1883
+    mqtt_broker_host: str = "127.0.0.1"
+    mqtt_broker_port: int = 1883
     mqtt_username: Optional[str] = None
     mqtt_password: Optional[str] = None
 
-    litellm_primary_model: str = "gemini/gemini-2.0-flash"
-    litellm_fallback_model: str = "ollama/llama3.1"
+    ollama_model: str = "ollama/llama3.2:latest"
+    ollama_api_base: str = "http://127.0.0.1:11434"
+    ollama_timeout: int = 180
+
+    whisper_model_size: str = "base"
+    piper_voice_path: str = "piper_voices/en/en_US/amy/medium/en_US-amy-medium.onnx"
 
     home_assistant_mcp_url: Optional[str] = None
 
@@ -56,16 +63,24 @@ def get_settings() -> Settings:
         debug=_as_bool(os.getenv("DEBUG"), True),
         database_url=os.getenv(
             "DATABASE_URL",
-            "postgresql+psycopg://postgres:postgres@localhost:5432/rufus",
+            "postgresql+psycopg2://postgres:postgres@localhost:5432/rufus",
         ),
         create_db_tables_on_startup=_as_bool(os.getenv("CREATE_DB_TABLES_ON_STARTUP"), False),
         firebase_project_id=os.getenv("FIREBASE_PROJECT_ID"),
         firebase_credentials_path=os.getenv("FIREBASE_CREDENTIALS_PATH"),
         mqtt_host=os.getenv("MQTT_HOST", "localhost"),
         mqtt_port=_as_int(os.getenv("MQTT_PORT"), 1883),
+        mqtt_broker_host=os.getenv("MQTT_BROKER_HOST", "127.0.0.1"),
+        mqtt_broker_port=_as_int(os.getenv("MQTT_BROKER_PORT"), 1883),
         mqtt_username=os.getenv("MQTT_USERNAME"),
         mqtt_password=os.getenv("MQTT_PASSWORD"),
-        litellm_primary_model=os.getenv("LITELLM_PRIMARY_MODEL", "gemini/gemini-2.0-flash"),
-        litellm_fallback_model=os.getenv("LITELLM_FALLBACK_MODEL", "ollama/llama3.1"),
+        ollama_model=os.getenv("OLLAMA_MODEL", "ollama/llama3.2:latest"),
+        ollama_api_base=os.getenv("OLLAMA_API_BASE", "http://127.0.0.1:11434"),
+        ollama_timeout=_as_int(os.getenv("OLLAMA_TIMEOUT"), 180),
+        whisper_model_size=os.getenv("WHISPER_MODEL_SIZE", "base"),
+        piper_voice_path=os.getenv(
+            "PIPER_VOICE_PATH",
+            "piper_voices/en/en_US/amy/medium/en_US-amy-medium.onnx",
+        ),
         home_assistant_mcp_url=os.getenv("HOME_ASSISTANT_MCP_URL"),
     )
