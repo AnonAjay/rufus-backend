@@ -3,6 +3,7 @@ import logging
 from typing import AsyncIterator
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.agent.llm_router import get_completion
 from app.agent.router import router as agent_router
@@ -23,7 +24,10 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     if settings.create_db_tables_on_startup:
-        initialize_database()
+        try:
+            initialize_database()
+        except Exception as exc:
+            logger.warning("Database initialization failed during startup: %s", exc)
     try:
         connect_mqtt()
     except Exception as exc:
@@ -48,6 +52,20 @@ def create_app() -> FastAPI:
         version=settings.app_version,
         debug=settings.debug,
         lifespan=lifespan,
+    )
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[
+            "http://localhost:1420",
+            "http://127.0.0.1:1420",
+            "tauri://localhost",
+            "https://tauri.localhost",
+            "*",
+        ],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
 
     app.include_router(agent_router)

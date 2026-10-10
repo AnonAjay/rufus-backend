@@ -26,6 +26,7 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     reply: str
     model_used: str
+    actions: list[str] = Field(default_factory=list)
 
 
 class VoiceResponse(BaseModel):
@@ -34,6 +35,7 @@ class VoiceResponse(BaseModel):
     model_used: str
     audio_base64: str
     audio_mime_type: str
+    actions: list[str] = Field(default_factory=list)
 
 
 @router.post("/chat", response_model=ChatResponse)
@@ -44,7 +46,11 @@ async def chat(request: ChatRequest) -> ChatResponse:
         detail = str(exc) if get_settings().debug else "Configured Ollama model unavailable"
         raise HTTPException(status_code=503, detail=detail) from exc
 
-    return ChatResponse(reply=result["reply"], model_used=get_settings().ollama_model)
+    return ChatResponse(
+        reply=result["reply"],
+        model_used=result.get("model_used") or get_settings().ollama_model,
+        actions=result.get("actions", []),
+    )
 
 
 @router.post("/voice", response_model=VoiceResponse)
@@ -62,11 +68,13 @@ async def voice(
         logger.warning("STT failed for voice request: %s", exc)
         transcript = ""
 
+    actions: list[str] = []
     if transcript:
         try:
             result = await run_agent(session_id, transcript)
             reply_text = result["reply"]
-            model_used = result["model_used"] or settings.ollama_model
+            model_used = result.get("model_used") or settings.ollama_model
+            actions = result.get("actions", [])
         except LLMServiceUnavailableError as exc:
             detail = str(exc) if settings.debug else "Configured Ollama model unavailable"
             raise HTTPException(status_code=503, detail=detail) from exc
@@ -90,6 +98,7 @@ async def voice(
         model_used=model_used,
         audio_base64=audio_base64,
         audio_mime_type=audio_mime_type,
+        actions=actions,
     )
 
 
