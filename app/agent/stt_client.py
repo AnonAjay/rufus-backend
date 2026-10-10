@@ -42,7 +42,14 @@ def load_whisper_model() -> Any:
     return _whisper_model
 
 
+import logging
+logger = logging.getLogger(__name__)
+
 def _transcribe_local_sync(audio_bytes: bytes, mime_type: str) -> str:
+    if not audio_bytes or len(audio_bytes) < 1000:
+        logger.info("Audio payload too small (%d bytes), skipping transcription", len(audio_bytes) if audio_bytes else 0)
+        return ""
+
     suffix = _suffix_for_mime_type(mime_type)
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as audio_file:
         audio_file.write(audio_bytes)
@@ -54,7 +61,8 @@ def _transcribe_local_sync(audio_bytes: bytes, mime_type: str) -> str:
     except Exception as exc:
         raise SpeechToTextError(f"Local faster-whisper transcription failed: {exc}") from exc
     finally:
-        os.unlink(audio_path)
+        if os.path.exists(audio_path):
+            os.unlink(audio_path)
 
 
 async def transcribe_audio(audio_bytes: bytes, mime_type: str) -> str:

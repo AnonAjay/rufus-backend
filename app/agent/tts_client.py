@@ -1,5 +1,6 @@
 import asyncio
 import os
+import shutil
 import tempfile
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -35,9 +36,11 @@ async def synthesize_speech(text: str) -> bytes:
     with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as output_file:
         output_path = output_file.name
 
+    piper_cmd = shutil.which("piper") or "piper"
+
     try:
         process = await asyncio.create_subprocess_exec(
-            "piper",
+            piper_cmd,
             "--model",
             str(voice_path),
             "--output_file",
