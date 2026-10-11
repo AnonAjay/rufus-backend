@@ -46,8 +46,11 @@ async def chat(request: ChatRequest) -> ChatResponse:
         detail = str(exc) if get_settings().debug else "Configured Ollama model unavailable"
         raise HTTPException(status_code=503, detail=detail) from exc
 
+    from app.agent.graph import sanitize_reply
+    cleaned_reply = sanitize_reply(result.get("reply", "")) or "I've handled that for you."
+
     return ChatResponse(
-        reply=result["reply"],
+        reply=cleaned_reply,
         model_used=result.get("model_used") or get_settings().ollama_model,
         actions=result.get("actions", []),
     )

@@ -90,7 +90,7 @@ async def get_completion(messages: list[dict], tools: list[dict] | None = None) 
         "api_base": settings.ollama_api_base,
         "api_key": "ollama",
         "timeout": settings.ollama_timeout,
-        "max_tokens": 180,
+        "max_tokens": 300,
     }
     if tools:
         # Normalize tools to standard OpenAI function-calling format
