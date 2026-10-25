@@ -108,3 +108,52 @@ async def voice(
 @router.get("/history/{session_id}")
 async def history(session_id: str) -> dict[str, list[dict[str, str]]]:
     return {"messages": conversation_memory.get_history(session_id)}
+
+
+# --- 3-Tier Hybrid Memory & Session Endpoints ---
+
+class CreateSessionRequest(BaseModel):
+    title: str = Field(default="New Conversation")
+
+
+@router.get("/sessions")
+async def list_sessions(limit: int = 50):
+    """Retrieve previous conversations for the History tab."""
+    from app.agent.hybrid_memory import hybrid_memory
+    sessions = hybrid_memory.list_sessions(limit=limit)
+    return {"sessions": sessions}
+
+
+@router.post("/sessions")
+async def create_session(request: CreateSessionRequest | None = None):
+    """Initialize a fresh conversation session."""
+    import uuid
+    from app.agent.hybrid_memory import hybrid_memory
+    new_id = str(uuid.uuid4())
+    title = request.title if request and request.title else "New Conversation"
+    session_data = hybrid_memory.ensure_session(new_id, title=title)
+    return session_data
+
+
+@router.get("/sessions/{session_id}/messages")
+async def get_session_messages(session_id: str):
+    """Retrieve all turns for a specific session (used when resuming chat)."""
+    from app.agent.hybrid_memory import hybrid_memory
+    messages = hybrid_memory.get_session_messages(session_id)
+    return {"session_id": session_id, "messages": messages}
+
+
+@router.delete("/sessions/{session_id}")
+async def delete_session(session_id: str):
+    """Delete a session and associated message archive."""
+    from app.agent.hybrid_memory import hybrid_memory
+    success = hybrid_memory.delete_session(session_id)
+    return {"success": success, "session_id": session_id}
+
+
+@router.get("/memory/search")
+async def search_memory(q: str = ""):
+    """FTS5 keyword search across all stored conversations."""
+    from app.agent.hybrid_memory import hybrid_memory
+    results = hybrid_memory.search_keyword(q)
+    return {"query": q, "results": results}

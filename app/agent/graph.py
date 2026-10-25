@@ -5,6 +5,7 @@ from typing import TypedDict
 from langgraph.graph import END, StateGraph
 
 from app.agent.emotion import get_current_emotion
+from app.agent.hybrid_memory import hybrid_memory
 from app.agent.llm_router import get_completion
 from app.agent.memory import conversation_memory
 from app.agent.tools import TOOL_DEFINITIONS, execute_tool
@@ -101,14 +102,16 @@ async def chat_node(state: AgentState) -> AgentState:
     session_id = state["session_id"]
     user_message = state["message"]
     emotion = get_current_emotion(session_id)
-    history = conversation_memory.get_history(session_id)
+    # Fetch Working Memory (capped to 10 turns to avoid 3B token bloat)
+    history = hybrid_memory.get_working_memory(session_id, limit=10)
 
     # Clean history so no old JSON leaks into the prompt
     cleaned_history = []
     for m in history:
-        clean_c = sanitize_reply(m["content"]) if m.get("role") == "assistant" else m["content"]
+        clean_c = sanitize_reply(m["content"]) if m.get("role") in {"assistant", "rufus"} else m["content"]
         if clean_c:
-            cleaned_history.append({"role": m["role"], "content": clean_c})
+            role = "assistant" if m.get("role") in {"assistant", "rufus"} else "user"
+            cleaned_history.append({"role": role, "content": clean_c})
 
     current_messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
@@ -136,6 +139,13 @@ async def chat_node(state: AgentState) -> AgentState:
     if not tool_calls:
         conversation_memory.add_message(session_id, "user", user_message)
         conversation_memory.add_message(session_id, "assistant", clean_content)
+        hybrid_memory.save_turn(
+            session_id=session_id,
+            user_text=user_message,
+            assistant_reply=clean_content,
+            actions=[],
+            model_used=model_used,
+        )
 
     return {
         **state,
@@ -220,6 +230,13 @@ async def respond_node(state: AgentState) -> AgentState:
     # Save completed turn into persistent conversation memory
     conversation_memory.add_message(session_id, "user", state["message"])
     conversation_memory.add_message(session_id, "assistant", reply)
+    hybrid_memory.save_turn(
+        session_id=session_id,
+        user_text=state["message"],
+        assistant_reply=reply,
+        actions=state.get("actions", []),
+        model_used=model_used,
+    )
 
     return {
         **state,
