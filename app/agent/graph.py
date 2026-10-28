@@ -79,9 +79,9 @@ SYSTEM_PROMPT = (
     "use 1-3 short spoken sentences unless the user explicitly asks for more detail. "
     "Do not use markdown, bullet points, headers, or numbered lists because replies "
     "will be read aloud through text-to-speech. Ask at most one question per reply. "
-    "You have access to tools to open approved apps (WhatsApp, Antigravity, VS Code, Browser, File Explorer), "
-    "open websites, search the web / define concepts, control Spotify, adjust system volume, "
-    "adjust screen brightness, visually inspect the screen with vision AI, and lock the workstation. "
+    "You have access to tools to open discovered desktop applications (WhatsApp, VS Code, Chrome, Brave, Discord, Spotify, Antigravity, Explorer, etc.), "
+    "send or draft WhatsApp messages, search WhatsApp contacts and chats, open websites, search the web / define concepts, "
+    "control Spotify, adjust system volume, adjust screen brightness, visually inspect the screen with vision AI, and lock the workstation. "
     "When the user asks about anything on their screen, wants an app or error inspected, or asks for recommendations from open apps, "
     "you MUST call inspect_screen with their specific question in the query parameter. "
     "Never output raw JSON in your spoken reply. After an action executes, confirm it warmly in one short sentence."
@@ -194,6 +194,13 @@ async def tools_node(state: AgentState) -> AgentState:
             actions.append("Inspected Screen (Vision)")
         elif tool_name == "lock_workstation":
             actions.append("Locked Workstation")
+        elif tool_name == "whatsapp_send_message":
+            recipient = tool_args.get("recipient", "contact")
+            actions.append(f"WhatsApp to {recipient.title()}")
+        elif tool_name == "whatsapp_search_contacts":
+            actions.append(f"Searched WhatsApp: {tool_args.get('query', '')}")
+        elif tool_name == "whatsapp_list_messages":
+            actions.append("Checked WhatsApp")
         else:
             actions.append(f"Executed {tool_name}")
 

@@ -1,0 +1,207 @@
+{
+  "last_scanned_at": "2026-10-28T17:50:59.824659+00:00",
+  "total_catalog": 14,
+  "installed_count": 13,
+  "applications": [
+    {
+      "id": "whatsapp",
+      "display_name": "WhatsApp",
+      "category": "communication",
+      "type": "os_action",
+      "installed": true,
+      "capabilities": [
+        "open",
+        "send_message",
+        "summarize_chat"
+      ],
+      "launch_type": "uri",
+      "launch_target": "whatsapp:",
+      "description": "Desktop instant messaging and communication."
+    },
+    {
+      "id": "vscode",
+      "display_name": "Visual Studio Code",
+      "category": "development",
+      "type": "os_action",
+      "installed": true,
+      "capabilities": [
+        "open",
+        "open_workspace",
+        "read_diagnostics"
+      ],
+      "launch_type": "uri",
+      "launch_target": "vscode:",
+      "description": "Code editor and developer environment."
+    },
+    {
+      "id": "antigravity",
+      "display_name": "Antigravity",
+      "category": "development",
+      "type": "os_action",
+      "installed": true,
+      "capabilities": [
+        "open",
+        "pair_program"
+      ],
+      "launch_type": "uri",
+      "launch_target": "antigravity:",
+      "description": "Google DeepMind agentic AI coding workspace."
+    },
+    {
+      "id": "spotify",
+      "display_name": "Spotify",
+      "category": "media",
+      "type": "os_action",
+      "installed": true,
+      "capabilities": [
+        "open",
+        "play",
+        "pause",
+        "search_music"
+      ],
+      "launch_type": "uri",
+      "launch_target": "spotify:",
+      "description": "Digital music and podcast streaming service."
+    },
+    {
+      "id": "chrome",
+      "display_name": "Google Chrome",
+      "category": "browser",
+      "type": "os_action",
+      "installed": true,
+      "capabilities": [
+        "open",
+        "browse_url",
+        "web_search"
+      ],
+      "launch_type": "path",
+      "launch_target": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+      "description": "Fast and secure web browser by Google."
+    },
+    {
+      "id": "brave",
+      "display_name": "Brave Browser",
+      "category": "browser",
+      "type": "os_action",
+      "installed": true,
+      "capabilities": [
+        "open",
+        "browse_url"
+      ],
+      "launch_type": "path",
+      "launch_target": "C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe",
+      "description": "Privacy-focused web browser."
+    },
+    {
+      "id": "discord",
+      "display_name": "Discord",
+      "category": "communication",
+      "type": "os_action",
+      "installed": true,
+      "capabilities": [
+        "open",
+        "voice_chat"
+      ],
+      "launch_type": "uri",
+      "launch_target": "discord:",
+      "description": "Voice, video, and text communication service."
+    },
+    {
+      "id": "telegram",
+      "display_name": "Telegram",
+      "category": "communication",
+      "type": "os_action",
+      "installed": false,
+      "capabilities": [
+        "open",
+        "send_message"
+      ],
+      "launch_type": null,
+      "launch_target": null,
+      "description": "Encrypted cloud-based mobile and desktop messaging."
+    },
+    {
+      "id": "arduino",
+      "display_name": "Arduino IDE",
+      "category": "robotics",
+      "type": "os_action",
+      "installed": true,
+      "capabilities": [
+        "open",
+        "firmware_flash"
+      ],
+      "launch_type": "command",
+      "launch_target": "arduino.exe",
+      "description": "Integrated development environment for ESP32 and Arduino firmware."
+    },
+    {
+      "id": "canva",
+      "display_name": "Canva",
+      "category": "design",
+      "type": "os_action",
+      "installed": true,
+      "capabilities": [
+        "open"
+      ],
+      "launch_type": "command",
+      "launch_target": "Canva.exe",
+      "description": "Visual design and content creation workspace."
+    },
+    {
+      "id": "docker",
+      "display_name": "Docker Desktop",
+      "category": "development",
+      "type": "os_action",
+      "installed": true,
+      "capabilities": [
+        "open",
+        "inspect_containers"
+      ],
+      "launch_type": "command",
+      "launch_target": "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe",
+      "description": "Container virtualization and local microservice management."
+    },
+    {
+      "id": "ollama",
+      "display_name": "Ollama",
+      "category": "ai",
+      "type": "os_action",
+      "installed": true,
+      "capabilities": [
+        "open",
+        "local_inference"
+      ],
+      "launch_type": "command",
+      "launch_target": "C:\\Users\\Asus\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+      "description": "Local large language model server running Llama and Moondream."
+    },
+    {
+      "id": "notepad",
+      "display_name": "Notepad",
+      "category": "productivity",
+      "type": "os_action",
+      "installed": true,
+      "capabilities": [
+        "open",
+        "take_notes"
+      ],
+      "launch_type": "command",
+      "launch_target": "C:\\Windows\\system32\\notepad.exe",
+      "description": "Lightweight text editor."
+    },
+    {
+      "id": "explorer",
+      "display_name": "File Explorer",
+      "category": "system",
+      "type": "os_action",
+      "installed": true,
+      "capabilities": [
+        "open",
+        "navigate_directory"
+      ],
+      "launch_type": "command",
+      "launch_target": "C:\\Windows\\explorer.exe",
+      "description": "Windows native file manager."
+    }
+  ]
+}

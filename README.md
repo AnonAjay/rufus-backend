@@ -58,8 +58,15 @@ in memory.
 The current implementation includes working FastAPI app creation, environment
 configuration, Firebase ID token verification behind a swappable auth interface,
 and SQLAlchemy session setup. Agent, MCP, MQTT, WebSocket, hardware mock, and
-notification modules are intentionally stubbed with TODOs for focused feature
-branches.
+notification modules are modularized under `app/`.
+
+## MCP Servers & Open-Source Credits
+
+Rufus integrates modular Model Context Protocol (MCP) servers located in `app/mcp_servers/`:
+
+- **WhatsApp MCP (`app/mcp_servers/whatsapp/`)**:
+  - Adapted from and inspired by the open-source **[whatsapp-mcp](https://github.com/lharries/whatsapp-mcp)** by **Luke Harries** (MIT License).
+  - Provides tools for contact searching, message querying, and WhatsApp message dispatching with dual-mode support (SQLite bridge + Windows protocol handler fallback).
 
 ## Mock Device
 

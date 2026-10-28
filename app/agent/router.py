@@ -157,3 +157,22 @@ async def search_memory(q: str = ""):
     from app.agent.hybrid_memory import hybrid_memory
     results = hybrid_memory.search_keyword(q)
     return {"query": q, "results": results}
+
+
+# --- Application Discovery & MCP Endpoints ---
+
+@router.get("/apps")
+async def list_discovered_apps():
+    """Return all cached applications with their installation status on Windows."""
+    from app.agent.discovery import get_installed_apps
+    apps = get_installed_apps()
+    return {"total": len(apps), "applications": apps}
+
+
+@router.post("/apps/scan")
+async def trigger_apps_scan():
+    """Trigger a live Windows Registry, Start Menu, and PATH scan to refresh discovered apps."""
+    from app.agent.discovery import scan_system_applications
+    apps = scan_system_applications()
+    return {"total": len(apps), "scanned_at": "now", "applications": apps}
+

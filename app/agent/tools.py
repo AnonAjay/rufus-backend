@@ -8,6 +8,14 @@ import json
 import webbrowser
 from typing import Any, Callable
 
+from app.agent.discovery import resolve_application, launch_application, get_installed_apps
+from app.mcp_servers.whatsapp.tools import (
+    whatsapp_send_message,
+    whatsapp_search_contacts,
+    whatsapp_list_messages,
+    save_contact_number,
+)
+
 logger = logging.getLogger(__name__)
 
 # Strict dictionary allowlist for desktop applications
@@ -73,8 +81,19 @@ def _launch_executable_or_protocol(target: str) -> None:
 
 
 def open_app(app_name: str) -> str:
-    """Launch an approved desktop application from the strict allowlist."""
+    """Launch an approved desktop application from discovery catalog or legacy allowlist."""
     cleaned = (app_name or "").strip().lower()
+
+    # 1. Query the dynamic application discovery engine
+    discovered = resolve_application(cleaned)
+    if discovered:
+        if discovered.get("installed"):
+            success, msg = launch_application(discovered)
+            return msg
+        else:
+            return f"'{discovered['display_name']}' is recognized, but does not appear to be installed on your computer."
+
+    # 2. Check legacy allowlist
     if cleaned in APP_ALLOWLIST:
         entry = APP_ALLOWLIST[cleaned]
         try:
@@ -84,10 +103,12 @@ def open_app(app_name: str) -> str:
             logger.error("Failed to launch %s: %s", cleaned, exc)
             return f"Failed to open {entry['name']}: {exc}"
 
-    allowed_names = sorted({v["name"] for v in APP_ALLOWLIST.values()})
+    # 3. Inform user of available applications
+    installed_apps = [a["display_name"] for a in get_installed_apps() if a.get("installed")]
+    sample_apps = sorted(set(installed_apps))[:8]
     return (
-        f"Permission denied: '{app_name}' is not in the allowed applications list. "
-        f"Allowed apps are: {', '.join(allowed_names)}."
+        f"Application '{app_name}' is not recognized or not installed. "
+        f"Discovered installed apps include: {', '.join(sample_apps)}."
     )
 
 
@@ -571,6 +592,73 @@ TOOL_DEFINITIONS = [
             "required": ["confirm"],
         },
     },
+    {
+        "name": "whatsapp_send_message",
+        "description": "Sends or drafts a WhatsApp message. Pass the exact contact name or phone number as spoken by the user. If the user gives a name like 'Ansh Mhjn' or 'Mom', pass that exact name in recipient. NEVER invent, hallucinate, or substitute fake phone numbers.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "recipient": {
+                    "type": "string",
+                    "description": "The exact contact name (e.g. 'Ansh Mhjn') or real phone number specified by the user. Do not invent numbers.",
+                },
+                "message": {
+                    "type": "string",
+                    "description": "The message text to send",
+                },
+            },
+            "required": ["recipient", "message"],
+        },
+    },
+    {
+        "name": "whatsapp_search_contacts",
+        "description": "Searches for contacts in WhatsApp by name or phone number.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "The name or phone number to search for",
+                },
+            },
+            "required": ["query"],
+        },
+    },
+    {
+        "name": "whatsapp_list_messages",
+        "description": "Retrieves recent messages from WhatsApp or searches messages for a keyword.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Optional search term to search within messages",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Number of recent messages to fetch (default 5)",
+                },
+            },
+        },
+    },
+    {
+        "name": "whatsapp_save_contact",
+        "description": "Saves a contact's name and real phone number into Rufus's address book for direct messaging.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "The person's contact name (e.g. 'Ansh Mhjn' or 'Mom')",
+                },
+                "phone": {
+                    "type": "string",
+                    "description": "Their real phone number including country code (e.g. '+919876543210')",
+                },
+            },
+            "required": ["name", "phone"],
+        },
+    },
 ]
 
 TOOL_REGISTRY: dict[str, Callable[..., str]] = {
@@ -583,6 +671,10 @@ TOOL_REGISTRY: dict[str, Callable[..., str]] = {
     "capture_screenshot": inspect_screen,  # Alias to inspect_screen so screen questions are never missed
     "inspect_screen": inspect_screen,
     "lock_workstation": lock_workstation,
+    "whatsapp_send_message": whatsapp_send_message,
+    "whatsapp_search_contacts": whatsapp_search_contacts,
+    "whatsapp_list_messages": whatsapp_list_messages,
+    "whatsapp_save_contact": save_contact_number,
 }
 
 
