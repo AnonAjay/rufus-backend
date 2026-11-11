@@ -290,6 +290,7 @@ def whatsapp_send_message(recipient: str, message: str) -> str:
 
 def whatsapp_get_last_interaction(contact: str) -> str:
     """Find the latest interaction timestamp or message with a contact."""
+    target = (contact or "").strip()
     db_path = _get_database_path()
     if db_path:
         try:
@@ -298,14 +299,18 @@ def whatsapp_get_last_interaction(contact: str) -> str:
                 cursor = conn.cursor()
                 cursor.execute(
                     "SELECT sender, text, timestamp FROM messages WHERE lower(sender) LIKE ? ORDER BY timestamp DESC LIMIT 1",
-                    (f"%{contact.lower()}%",),
+                    (f"%{target.lower()}%",),
                 )
                 row = cursor.fetchone()
                 if row:
-                    return f"Last interaction with {contact} was at {row['timestamp']}: '{row['text']}'"
-                return f"No recorded interaction found for '{contact}'."
+                    return f"Last message from {target.title()} ({row['timestamp']}): '{row['text']}'"
+                return f"No recorded messages found from '{target.title()}' in local archive."
         except Exception as exc:
             logger.error("Failed to get last interaction: %s", exc)
 
-    return f"WhatsApp message archive offline. Unable to query last interaction with '{contact}'."
+    return (
+        f"WhatsApp background sync is offline so I cannot read private messages from disk. "
+        f"If WhatsApp is open on your screen, ask me: 'Look at my screen and tell me what {target.title()} replied', "
+        f"and I will visually read their reply."
+    )
 

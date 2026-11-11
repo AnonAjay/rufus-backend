@@ -13,6 +13,7 @@ from app.mcp_servers.whatsapp.tools import (
     whatsapp_send_message,
     whatsapp_search_contacts,
     whatsapp_list_messages,
+    whatsapp_get_last_interaction,
     save_contact_number,
 )
 
@@ -659,6 +660,20 @@ TOOL_DEFINITIONS = [
             "required": ["name", "phone"],
         },
     },
+    {
+        "name": "whatsapp_get_last_interaction",
+        "description": "Finds the latest reply or message exchanged with a specific WhatsApp contact. Use when the user asks 'what did they reply?', 'did [name] respond?', or wants to check replies from a contact.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "contact": {
+                    "type": "string",
+                    "description": "The name or phone number of the contact to check replies from",
+                },
+            },
+            "required": ["contact"],
+        },
+    },
 ]
 
 TOOL_REGISTRY: dict[str, Callable[..., str]] = {
@@ -675,6 +690,7 @@ TOOL_REGISTRY: dict[str, Callable[..., str]] = {
     "whatsapp_search_contacts": whatsapp_search_contacts,
     "whatsapp_list_messages": whatsapp_list_messages,
     "whatsapp_save_contact": save_contact_number,
+    "whatsapp_get_last_interaction": whatsapp_get_last_interaction,
 }
 
 

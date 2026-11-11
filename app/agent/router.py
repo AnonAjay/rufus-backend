@@ -21,11 +21,14 @@ CLARIFICATION_REPLY = "Sorry, I didn't catch that. Can you say that again?"
 class ChatRequest(BaseModel):
     session_id: str = Field(..., min_length=1)
     message: str = Field(..., min_length=1)
+    persona: str = Field(default="companion")
 
 
 class ChatResponse(BaseModel):
     reply: str
     model_used: str
+    action_type: str = "speech"
+    confidence: float = 0.95
     actions: list[str] = Field(default_factory=list)
 
 
@@ -35,13 +38,15 @@ class VoiceResponse(BaseModel):
     model_used: str
     audio_base64: str
     audio_mime_type: str
+    action_type: str = "speech"
+    confidence: float = 0.95
     actions: list[str] = Field(default_factory=list)
 
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest) -> ChatResponse:
     try:
-        result = await run_agent(request.session_id, request.message)
+        result = await run_agent(request.session_id, request.message, persona=request.persona)
     except LLMServiceUnavailableError as exc:
         detail = str(exc) if get_settings().debug else "Configured Ollama model unavailable"
         raise HTTPException(status_code=503, detail=detail) from exc
@@ -52,6 +57,8 @@ async def chat(request: ChatRequest) -> ChatResponse:
     return ChatResponse(
         reply=cleaned_reply,
         model_used=result.get("model_used") or get_settings().ollama_model,
+        action_type=result.get("action_type", "speech"),
+        confidence=float(result.get("confidence", 0.95)),
         actions=result.get("actions", []),
     )
 
@@ -60,6 +67,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
 async def voice(
     session_id: str = Form(..., min_length=1),
     audio_file: UploadFile = File(...),
+    persona: str = Form("companion"),
 ) -> VoiceResponse:
     audio_bytes = await audio_file.read()
     mime_type = audio_file.content_type or "application/octet-stream"
@@ -72,12 +80,16 @@ async def voice(
         transcript = ""
 
     actions: list[str] = []
+    action_type = "speech"
+    confidence = 0.95
     if transcript:
         try:
-            result = await run_agent(session_id, transcript)
+            result = await run_agent(session_id, transcript, persona=persona)
             reply_text = result["reply"]
             model_used = result.get("model_used") or settings.ollama_model
             actions = result.get("actions", [])
+            action_type = result.get("action_type", "speech")
+            confidence = float(result.get("confidence", 0.95))
         except LLMServiceUnavailableError as exc:
             detail = str(exc) if settings.debug else "Configured Ollama model unavailable"
             raise HTTPException(status_code=503, detail=detail) from exc
@@ -101,6 +113,8 @@ async def voice(
         model_used=model_used,
         audio_base64=audio_base64,
         audio_mime_type=audio_mime_type,
+        action_type=action_type,
+        confidence=confidence,
         actions=actions,
     )
 
