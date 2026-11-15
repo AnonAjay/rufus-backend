@@ -1,0 +1,47 @@
+[
+  {
+    "id": 1,
+    "name": "Pure Chit-Chat",
+    "query": "Hey Rufus, how's your day going so far?",
+    "expected_path": "chat_node (Speech)",
+    "elapsed_sec": 0.06568629999674158,
+    "status": "FAIL",
+    "error": "<urlopen error [WinError 10013] An attempt was made to access a socket in a way forbidden by its access permissions>"
+  },
+  {
+    "id": 2,
+    "name": "Safe Mutation Action",
+    "query": "Set system volume to 65",
+    "expected_path": "tools_node -> END (Short-Circuit)",
+    "elapsed_sec": 0.0010573000035947189,
+    "status": "FAIL",
+    "error": "<urlopen error [WinError 10013] An attempt was made to access a socket in a way forbidden by its access permissions>"
+  },
+  {
+    "id": 3,
+    "name": "Action Route (No Tool)",
+    "query": "I might want to listen to some music or maybe not, what do you think?",
+    "expected_path": "agent_node -> END",
+    "elapsed_sec": 0.0007812999974703416,
+    "status": "FAIL",
+    "error": "<urlopen error [WinError 10013] An attempt was made to access a socket in a way forbidden by its access permissions>"
+  },
+  {
+    "id": 4,
+    "name": "Coder Generation",
+    "query": "Write a Python function to check if a string is a palindrome with docstring and type hints.",
+    "expected_path": "chat_node (Coder)",
+    "elapsed_sec": 0.02445409999927506,
+    "status": "FAIL",
+    "error": "<urlopen error [WinError 10013] An attempt was made to access a socket in a way forbidden by its access permissions>"
+  },
+  {
+    "id": 5,
+    "name": "Observation Action",
+    "query": "Search the web for the release date of Python 3.14",
+    "expected_path": "tools_node -> respond_node -> END",
+    "elapsed_sec": 0.0009483999965596013,
+    "status": "FAIL",
+    "error": "<urlopen error [WinError 10013] An attempt was made to access a socket in a way forbidden by its access permissions>"
+  }
+]

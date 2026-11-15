@@ -21,7 +21,11 @@ class LLMServiceUnavailableError(RuntimeError):
     """Raised when the configured local Ollama model is unavailable."""
 
 
-def _extract_reply_and_tool_calls(response: Any, tools_provided: bool = False) -> tuple[str, list[dict]]:
+def _extract_reply_and_tool_calls(
+    response: Any,
+    tools_provided: bool = False,
+    allowed_tool_names: set[str] | None = None,
+) -> tuple[str, list[dict]]:
     message = response.choices[0].message
     content = getattr(message, "content", "") or ""
     
@@ -47,7 +51,9 @@ def _extract_reply_and_tool_calls(response: Any, tools_provided: bool = False) -
             else:
                 args = {}
             if name:
-                extracted_calls.append({"name": name, "arguments": args})
+                # Security & Correctness: Enforce strict allowlist check on emitted tool names
+                if not allowed_tool_names or name in allowed_tool_names:
+                    extracted_calls.append({"name": name, "arguments": args})
 
     # Fallback parsing for small local models outputting JSON tool calls in text
     if not extracted_calls and content and "{" in content and "}" in content:
@@ -59,8 +65,10 @@ def _extract_reply_and_tool_calls(response: Any, tools_provided: bool = False) -
                 data = json.loads(json_match.group(0))
                 tool_name = data.get("tool") or data.get("name") or data.get("action")
                 args = data.get("arguments") or data.get("parameters") or {k: v for k, v in data.items() if k not in {"tool", "name", "action"}}
+                # Strict check: NEVER extract a tool call that is not in the registered tool definitions
                 if tool_name and isinstance(args, dict):
-                    extracted_calls.append({"name": tool_name, "arguments": args})
+                    if allowed_tool_names and tool_name in allowed_tool_names:
+                        extracted_calls.append({"name": tool_name, "arguments": args})
             except Exception:
                 pass
 
@@ -90,12 +98,17 @@ async def get_completion(messages: list[dict], tools: list[dict] | None = None) 
         "api_base": settings.ollama_api_base,
         "api_key": "ollama",
         "timeout": settings.ollama_timeout,
-        "max_tokens": 300,
+        "max_tokens": 1000,
+        "stop": ["\n### User:", "\nUser:", "\n### Human:", "\nHuman:"],
     }
+    allowed_tool_names: set[str] = set()
     if tools:
         # Normalize tools to standard OpenAI function-calling format
         formatted = []
         for t in tools:
+            name = t.get("name") or t.get("function", {}).get("name")
+            if name:
+                allowed_tool_names.add(name)
             if "parameters" in t and "type" not in t:
                 formatted.append({"type": "function", "function": t})
             else:
@@ -114,6 +127,10 @@ async def get_completion(messages: list[dict], tools: list[dict] | None = None) 
             raise LLMServiceUnavailableError(_build_error_message(exc)) from exc
         raise
 
-    content, tool_calls = _extract_reply_and_tool_calls(response, tools_provided=bool(tools))
+    content, tool_calls = _extract_reply_and_tool_calls(
+        response,
+        tools_provided=bool(tools),
+        allowed_tool_names=allowed_tool_names,
+    )
     return CompletionResult(content, settings.ollama_model, tool_calls)
 

@@ -1,6 +1,6 @@
 import re
 import logging
-from typing import TypedDict
+from typing import TypedDict, NotRequired
 
 from langgraph.graph import END, StateGraph
 
@@ -19,8 +19,15 @@ def sanitize_reply(text: str) -> str:
         return ""
 
     t = text.strip()
-    # Strip markdown code blocks containing json
-    t = re.sub(r"```(?:json)?[\s\S]*?```", "", t).strip()
+
+    # Strip markdown code blocks ONLY if they contain JSON tool calling payloads
+    def _strip_json_tool_fence(match: re.Match) -> str:
+        block = match.group(0)
+        if any(k in block for k in ['"name"', '"tool"', '"action"', '"arguments"', '"parameters"']):
+            return ""
+        return block
+
+    t = re.sub(r"```(?:json)?\s*\{[\s\S]*?\}\s*```", _strip_json_tool_fence, t).strip()
 
     # Strip leading colon/semicolon/punctuation spam (e.g. ::::::: )
     t = re.sub(r"^[:;,\.\s\-]+", "", t).strip()
@@ -71,6 +78,13 @@ def sanitize_reply(text: str) -> str:
                 t = t[:start_idx].strip()
             break
 
+    # Strip orphan JSON/Tool output headers left behind after stripping tool payloads
+    t = re.sub(r"^(?:json\s+output|tool\s+output|action\s+output|output)[\s:]*", "", t, flags=re.IGNORECASE).strip()
+    t = re.sub(r"[\s:]*(?:json\s+output|tool\s+output|action\s+output)$", "", t, flags=re.IGNORECASE).strip()
+
+    # Truncate any hallucinated simulated user turns if model ever predicts past its turn
+    t = re.split(r"\n(?:###\s*)?(?:user|human):", t, flags=re.IGNORECASE)[0].strip()
+
     # Strip any leftover punctuation spam
     t = re.sub(r"^[:;,\.\s\-]+", "", t).strip()
     return t
@@ -103,9 +117,10 @@ PERSONA_PROMPTS: dict[str, str] = {
         "Your goal is deep conceptual clarity and teaching excellence.\n"
         "Guidelines:\n"
         "1. Break topics down systematically into foundational first principles.\n"
-        "2. Use clear analogies, mental models, and real-world system architecture examples.\n"
-        "3. Provide authoritative citations, academic references, RFCs, and official documentation links where relevant.\n"
-        "4. Conclude with a sharp Socratic recall check question to verify the user's understanding.\n"
+        "2. When explaining code, algorithms, or technical concepts, ALWAYS provide the complete executable code block in standard markdown fences (```lang ... ```).\n"
+        "3. Use clear analogies, mental models, and real-world system architecture examples.\n"
+        "4. Provide authoritative citations, academic references, RFCs, and official documentation links where relevant.\n"
+        "5. Conclude with a sharp Socratic recall check question to verify the user's understanding.\n"
         "Format your responses cleanly with Markdown headers, bold highlights, and structured bullet points.\n\n"
         + SHARED_TOOL_CAPABILITIES
     ),
@@ -126,9 +141,9 @@ PERSONA_PROMPTS: dict[str, str] = {
         "You are Rufus in Coding Assistant Mode—an elite systems programmer, full-stack engineer, and software architect. "
         "Your goal is production-grade code correctness, architectural durability, and high performance.\n"
         "Guidelines:\n"
-        "1. Terse, direct, and code-centric. Skip conversational pleasantries, filler phrases, and generic introductions.\n"
-        "2. Write idiomatic, production-ready code blocks with complete syntax highlighting, strict types, and robust error handling.\n"
-        "3. Surface subtle edge cases, race conditions, memory leaks, security vulnerabilities, and typing pitfalls immediately.\n"
+        "1. Lead with the complete, production-ready code block FIRST in standard markdown code fences (```lang ... ```). Skip conversational pleasantries, filler phrases, and generic introductions.\n"
+        "2. Write idiomatic, production-ready code with complete syntax highlighting, strict types, and robust error handling.\n"
+        "3. Surface subtle edge cases, race conditions, memory leaks, security vulnerabilities, and typing pitfalls immediately after the code.\n"
         "4. Explain architectural choices bluntly: why this approach over alternatives, what could break, and which file to inspect first.\n\n"
         + SHARED_TOOL_CAPABILITIES
     ),
@@ -153,6 +168,7 @@ class AgentState(TypedDict):
     actions: list[str]
     tool_calls: list[dict]
     messages: list[dict]
+    skip_respond: NotRequired[bool]
 
 
 async def router_node(state: AgentState) -> AgentState:
@@ -240,12 +256,15 @@ async def chat_node(state: AgentState) -> AgentState:
 
     conversation_memory.add_message(session_id, "user", user_message)
     conversation_memory.add_message(session_id, "assistant", clean_content)
+    conf_val = state.get("confidence")
+    acc_str = f"{conf_val * 100:.1f}%" if conf_val is not None else None
     hybrid_memory.save_turn(
         session_id=session_id,
         user_text=user_message,
         assistant_reply=clean_content,
         actions=[],
         model_used=model_used,
+        accuracy=acc_str,
     )
 
     return {
@@ -329,11 +348,35 @@ def should_call_tools(state: AgentState) -> str:
     return END
 
 
+MUTATION_TOOLS = {
+    "open_app",
+    "open_website",
+    "spotify_control",
+    "system_volume",
+    "screen_brightness",
+    "lock_workstation",
+    "whatsapp_send_message",
+    "whatsapp_save_contact",
+    "robot_stunt",
+}
+
+OBSERVATION_TOOLS = {
+    "web_search",
+    "inspect_screen",
+    "capture_screenshot",
+    "whatsapp_get_last_interaction",
+    "whatsapp_search_contacts",
+    "whatsapp_list_messages",
+}
+
+
 async def tools_node(state: AgentState) -> AgentState:
-    """Execute emitted tool calls against strict allowlists."""
+    """Execute emitted tool calls against strict allowlists and bifurcate mutation vs observation."""
     tool_calls = state.get("tool_calls", [])
     actions = list(state.get("actions", []))
     current_messages = list(state.get("messages", []))
+    mutation_replies: list[str] = []
+    has_observation_tool = False
 
     for call in tool_calls:
         tool_name = call.get("name", "")
@@ -342,62 +385,81 @@ async def tools_node(state: AgentState) -> AgentState:
 
         tool_result = execute_tool(tool_name, tool_args)
 
-        # Human-readable action badge for UI
+        # Human-readable action badge and instant confirmation generation
         if tool_name == "open_app":
             app_name = str(tool_args.get("app_name", "Application")).strip()
             actions.append(f"Opened {app_name.title()}")
+            if "error" in tool_result.lower() or "not found" in tool_result.lower():
+                mutation_replies.append(f"Sorry, I couldn't open {app_name.title()}: {tool_result}")
+            else:
+                mutation_replies.append(f"I've opened {app_name.title()} for you.")
         elif tool_name == "open_website":
             url = str(tool_args.get("url", "website")).strip()
             display_url = re.sub(r"^https?://(?:www\.)?", "", url).rstrip("/")
             actions.append(f"Navigated to {display_url}")
-        elif tool_name == "web_search":
-            query = str(tool_args.get("query", "")).strip()
-            actions.append(f"Searched web for '{query}'" if query else "Searched web")
+            mutation_replies.append(f"I've opened {display_url} in your browser.")
         elif tool_name == "spotify_control":
             cmd = str(tool_args.get("command", "control")).strip()
             target = str(tool_args.get("target", "")).strip()
             if target:
                 actions.append(f"Spotify: {cmd.title()} '{target}'")
+                mutation_replies.append(f"Spotify: {cmd.title()} '{target}'.")
             else:
                 actions.append(f"Spotify: {cmd.title()}")
+                mutation_replies.append(f"Spotify {cmd.title()} executed.")
         elif tool_name == "system_volume":
             val = tool_args.get("value")
             act = str(tool_args.get("action", "adjusted")).strip()
             if val is not None:
                 actions.append(f"Set system volume to {val}%")
+                mutation_replies.append(f"I've set the system volume to {val}%.")
             else:
                 actions.append(f"Adjusted system volume ({act})")
+                mutation_replies.append("I've adjusted the system volume for you.")
         elif tool_name == "screen_brightness":
             val = tool_args.get("value")
             if val is not None:
                 actions.append(f"Set brightness to {val}%")
+                mutation_replies.append(f"I've set the screen brightness to {val}%.")
             else:
                 actions.append("Adjusted screen brightness")
-        elif tool_name in {"capture_screenshot", "inspect_screen"}:
-            actions.append("Inspected screen with Vision AI")
+                mutation_replies.append("I've adjusted the screen brightness for you.")
         elif tool_name == "lock_workstation":
             actions.append("Locked Windows desktop")
+            mutation_replies.append("I've locked your workstation.")
         elif tool_name == "whatsapp_send_message":
             recipient = str(tool_args.get("recipient", "contact")).strip()
             actions.append(f"Sent text to {recipient.title()} on WhatsApp")
-        elif tool_name == "whatsapp_get_last_interaction":
-            contact = str(tool_args.get("contact", "contact")).strip()
-            actions.append(f"Read {contact.title()}'s reply on WhatsApp")
-        elif tool_name == "whatsapp_search_contacts":
-            query = str(tool_args.get("query", "")).strip()
-            actions.append(f"Searched WhatsApp contacts for {query.title()}" if query else "Searched WhatsApp contacts")
-        elif tool_name == "whatsapp_list_messages":
-            actions.append("Checked recent messages on WhatsApp")
+            mutation_replies.append(f"I've sent that message to {recipient.title()} on WhatsApp.")
         elif tool_name == "whatsapp_save_contact":
             name = str(tool_args.get("name", "Contact")).strip()
             actions.append(f"Saved {name.title()}'s contact on WhatsApp")
+            mutation_replies.append(f"I've saved {name.title()}'s contact on WhatsApp.")
         elif tool_name == "robot_stunt":
             stunt = str(tool_args.get("stunt", "stunt")).strip()
             actions.append(f"Executed robot stunt: {stunt.title()}")
+            mutation_replies.append(f"I've executed the {stunt.title()} stunt on Rufus.")
+        elif tool_name in OBSERVATION_TOOLS or tool_name in {"capture_screenshot", "inspect_screen", "web_search", "whatsapp_get_last_interaction", "whatsapp_search_contacts", "whatsapp_list_messages"}:
+            has_observation_tool = True
+            if tool_name in {"capture_screenshot", "inspect_screen"}:
+                actions.append("Inspected screen with Vision AI")
+            elif tool_name == "web_search":
+                query = str(tool_args.get("query", "")).strip()
+                actions.append(f"Searched web for '{query}'" if query else "Searched web")
+            elif tool_name == "whatsapp_get_last_interaction":
+                contact = str(tool_args.get("contact", "contact")).strip()
+                actions.append(f"Read {contact.title()}'s reply on WhatsApp")
+            elif tool_name == "whatsapp_search_contacts":
+                query = str(tool_args.get("query", "")).strip()
+                actions.append(f"Searched WhatsApp contacts for {query.title()}" if query else "Searched WhatsApp contacts")
+            elif tool_name == "whatsapp_list_messages":
+                actions.append("Checked recent messages on WhatsApp")
         else:
             clean_name = tool_name.replace("_", " ").title()
             actions.append(f"Executed {clean_name}")
+            mutation_replies.append(f"I've completed {clean_name} for you.")
 
+        # Prepare observation message for LLM synthesis (used if tool is an observation tool)
         persona = state.get("persona", "companion")
         if persona == "instructor":
             instruction = (
@@ -422,11 +484,38 @@ async def tools_node(state: AgentState) -> AgentState:
             "content": f"[Tool observation from {tool_name}]: {tool_result}\n{instruction}",
         })
 
+    session_id = state["session_id"]
+
+    # Short-circuit: If all executed tools were mutation actions, skip LLM Call 2 entirely!
+    if not has_observation_tool and mutation_replies:
+        instant_reply = " ".join(mutation_replies)
+        conversation_memory.add_message(session_id, "user", state["message"])
+        conversation_memory.add_message(session_id, "assistant", instant_reply)
+        conf_val = state.get("confidence")
+        acc_str = f"{conf_val * 100:.1f}%" if conf_val is not None else None
+        hybrid_memory.save_turn(
+            session_id=session_id,
+            user_text=state["message"],
+            assistant_reply=instant_reply,
+            actions=actions,
+            model_used=state.get("model_used") or "fast_action",
+            accuracy=acc_str,
+        )
+        return {
+            **state,
+            "reply": instant_reply,
+            "tool_calls": [],
+            "actions": actions,
+            "messages": current_messages,
+            "skip_respond": True,
+        }
+
     return {
         **state,
         "tool_calls": [],
         "actions": actions,
         "messages": current_messages,
+        "skip_respond": False,
     }
 
 
@@ -461,12 +550,15 @@ async def respond_node(state: AgentState) -> AgentState:
     # Save completed turn into persistent conversation memory
     conversation_memory.add_message(session_id, "user", state["message"])
     conversation_memory.add_message(session_id, "assistant", reply)
+    conf_val = state.get("confidence")
+    acc_str = f"{conf_val * 100:.1f}%" if conf_val is not None else None
     hybrid_memory.save_turn(
         session_id=session_id,
         user_text=state["message"],
         assistant_reply=reply,
         actions=state.get("actions", []),
         model_used=model_used,
+        accuracy=acc_str,
     )
 
     return {
@@ -475,6 +567,16 @@ async def respond_node(state: AgentState) -> AgentState:
         "model_used": model_used,
         "tool_calls": [],
     }
+
+
+def route_after_tools(state: AgentState) -> str:
+    """
+    Conditional edge determining if execution can finish immediately (mutation action)
+    or must continue to respond_node for LLM observation synthesis (search/vision).
+    """
+    if state.get("skip_respond"):
+        return END
+    return "respond"
 
 
 def _build_graph():
@@ -504,7 +606,13 @@ def _build_graph():
         should_call_tools,
         {"tools": "tools", END: END},
     )
-    graph.add_edge("tools", "respond")
+
+    # 5. Tool Path: Mutation actions short-circuit directly to END; observation tools synthesize in respond_node
+    graph.add_conditional_edges(
+        "tools",
+        route_after_tools,
+        {"respond": "respond", END: END},
+    )
     graph.add_edge("respond", END)
 
     return graph.compile()
