@@ -1,10 +1,12 @@
+import html
+import json
 import logging
 import os
+import re
 import shutil
 import subprocess
 import urllib.parse
 import urllib.request
-import json
 import webbrowser
 from typing import Any, Callable
 
@@ -155,14 +157,64 @@ def open_website(url: str) -> str:
         return f"Failed to open website: {exc}"
 
 
-def web_search(query: str) -> str:
-    """Perform a concise web search or term definition lookup."""
+def web_search(query: str, max_results: int = 4) -> str:
+    """Perform a live web search returning top verified sources with titles, URLs, and snippet excerpts."""
     query = (query or "").strip()
     if not query:
         return "Search query cannot be empty."
 
+    # 1. Primary Engine: DuckDuckGo Lite (live search index, zero-auth, multi-source)
     try:
-        # Use DuckDuckGo Instant Answer API for fast, zero-auth factual definitions
+        data = urllib.parse.urlencode({"q": query}).encode("utf-8")
+        req = urllib.request.Request(
+            "https://lite.duckduckgo.com/lite/",
+            data=data,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=6) as response:
+            content = response.read().decode("utf-8", errors="ignore")
+
+        link_matches = re.findall(
+            r'<a[^>]+href=[\'"]([^\'"]+)[\'"][^>]+class=[\'"]result-link[\'"][^>]*>(.*?)</a>',
+            content,
+            re.DOTALL,
+        )
+        snippet_matches = re.findall(
+            r'<td[^>]+class=[\'"]result-snippet[\'"][^>]*>(.*?)</td>',
+            content,
+            re.DOTALL,
+        )
+
+        entries: list[str] = []
+        limit = min(len(link_matches), len(snippet_matches), max(1, max_results))
+        for i in range(limit):
+            raw_url = link_matches[i][0]
+            raw_title = re.sub(r"<[^>]+>", "", link_matches[i][1]).strip()
+            raw_snippet = re.sub(r"<[^>]+>", "", snippet_matches[i]).strip()
+
+            url = raw_url
+            if "uddg=" in raw_url:
+                parsed_q = urllib.parse.parse_qs(urllib.parse.urlparse(raw_url).query)
+                if "uddg" in parsed_q:
+                    url = parsed_q["uddg"][0]
+            elif raw_url.startswith("//"):
+                url = "https:" + raw_url
+
+            title = html.unescape(raw_title)
+            snippet = html.unescape(raw_snippet)
+            entries.append(f"[{i + 1}] {title}\nURL: {url}\nExcerpt: {snippet}")
+
+        if entries:
+            header = f"Live web search results for '{query}':\n\n"
+            return header + "\n\n".join(entries)
+    except Exception as exc:
+        logger.warning("DuckDuckGo Lite search failed: %s; falling back to Instant Answer API", exc)
+
+    # 2. Resilient Fallback: DuckDuckGo Instant Answer API
+    try:
         encoded = urllib.parse.quote(query)
         api_url = f"https://api.duckduckgo.com/?q={encoded}&format=json&no_html=1&skip_disambig=1"
         req = urllib.request.Request(api_url, headers={"User-Agent": "Rufus-Desktop/1.0"})
@@ -171,21 +223,20 @@ def web_search(query: str) -> str:
 
         abstract = data.get("AbstractText") or data.get("Abstract")
         if abstract:
-            return f"According to online reference: {abstract}"
+            source_url = data.get("AbstractURL") or f"https://duckduckgo.com/?q={encoded}"
+            return f"[1] {data.get('Heading') or query}\nURL: {source_url}\nExcerpt: {abstract}"
 
-        heading = data.get("Heading")
         related = data.get("RelatedTopics", [])
         if related and isinstance(related, list):
             first_text = related[0].get("Text") if isinstance(related[0], dict) else ""
+            first_url = related[0].get("FirstURL") if isinstance(related[0], dict) else ""
             if first_text:
-                return f"{heading or query}: {first_text}"
+                return f"[1] {query}\nURL: {first_url or f'https://duckduckgo.com/?q={encoded}'}\nExcerpt: {first_text}"
 
-        # If direct instant answer is empty, provide search link status
-        search_url = f"https://duckduckgo.com/?q={encoded}"
-        return f"Searched online for '{query}'. Found reference articles on DuckDuckGo."
+        return f"Searched online for '{query}'. No direct match found. Reference: https://duckduckgo.com/?q={encoded}"
     except Exception as exc:
-        logger.warning("Web search lookup failed: %s", exc)
-        return f"Completed web query for '{query}'. Reference lookup returned standard summary."
+        logger.warning("All web search fallbacks failed: %s", exc)
+        return f"Web search for '{query}' encountered a network error: {exc}"
 
 
 def spotify_control(command: str, query: str = "") -> str:
@@ -490,14 +541,18 @@ TOOL_DEFINITIONS = [
     },
     {
         "name": "web_search",
-        "description": "Searches the web or defines a concept/term to answer factual questions (e.g. 'what does entropy mean').",
+        "description": "Searches the live web to retrieve real-time facts, current news, technical documentation, releases, or definitions with verified source URLs.",
         "parameters": {
             "type": "object",
             "properties": {
                 "query": {
                     "type": "string",
-                    "description": "The search query or term to define",
-                }
+                    "description": "The search query, topic, or question to research on the web",
+                },
+                "max_results": {
+                    "type": "integer",
+                    "description": "Number of sources to retrieve (default 4, max 6)",
+                },
             },
             "required": ["query"],
         },

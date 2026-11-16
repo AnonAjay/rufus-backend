@@ -461,7 +461,29 @@ async def tools_node(state: AgentState) -> AgentState:
 
         # Prepare observation message for LLM synthesis (used if tool is an observation tool)
         persona = state.get("persona", "companion")
-        if persona == "instructor":
+        if tool_name == "web_search":
+            if persona == "researcher":
+                instruction = (
+                    "Synthesize these search findings into an objective, structured research summary. "
+                    "Cite verified facts with inline Markdown hyperlinks formatted as [Source Name](URL) using the provided results. "
+                    "Highlight verified dates, technical specifications, and key conclusions."
+                )
+            elif persona == "instructor":
+                instruction = (
+                    "Synthesize these search findings thoroughly for the student. Break down core concepts, "
+                    "cite reference links as Markdown [Source Name](URL), and conclude with a Socratic reflection question."
+                )
+            elif persona == "coder":
+                instruction = (
+                    "Extract the verified technical facts, API specs, or documentation links from these results. "
+                    "Provide a concise, code-centric answer with production snippets and source links."
+                )
+            else:
+                instruction = (
+                    "In 1 to 3 informative sentences, answer the user's question directly based on these live search findings. "
+                    "Include the primary reference link as a Markdown hyperlink [Source](URL)."
+                )
+        elif persona == "instructor":
             instruction = (
                 "Synthesize these findings thoroughly for the student. Break down core principles, "
                 "provide conceptual depth and clear explanations, and conclude with a Socratic check question."
