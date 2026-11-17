@@ -173,6 +173,44 @@ async def search_memory(q: str = ""):
     return {"query": q, "results": results}
 
 
+# --- Persistent Semantic User & Project Memory Endpoints ---
+
+class SaveMemoryRequest(BaseModel):
+    category: str = Field(default="project")
+    title: str = Field(..., min_length=1)
+    content: str = Field(..., min_length=1)
+    memory_id: str | None = None
+
+
+@router.get("/memories")
+async def list_user_memories(category: str | None = None):
+    """Retrieve all persistent user and project memories."""
+    from app.agent.hybrid_memory import hybrid_memory
+    memories = hybrid_memory.get_all_user_memories(category=category)
+    return {"total": len(memories), "memories": memories}
+
+
+@router.post("/memories")
+async def save_user_memory_endpoint(req: SaveMemoryRequest):
+    """Create or update a persistent user or project memory."""
+    from app.agent.hybrid_memory import hybrid_memory
+    item = hybrid_memory.save_user_memory(
+        category=req.category,
+        title=req.title,
+        content=req.content,
+        memory_id=req.memory_id,
+    )
+    return {"success": True, "memory": item}
+
+
+@router.delete("/memories/{memory_id}")
+async def delete_user_memory_endpoint(memory_id: str):
+    """Delete a persistent user memory item."""
+    from app.agent.hybrid_memory import hybrid_memory
+    success = hybrid_memory.delete_user_memory(memory_id)
+    return {"success": success, "memory_id": memory_id}
+
+
 # --- Application Discovery & MCP Endpoints ---
 
 @router.get("/apps")
@@ -189,4 +227,35 @@ async def trigger_apps_scan():
     from app.agent.discovery import scan_system_applications
     apps = scan_system_applications()
     return {"total": len(apps), "scanned_at": "now", "applications": apps}
+
+
+# --- Dynamic Apps & Skills Permissions Endpoints ---
+
+class UpdatePermissionsRequest(BaseModel):
+    apps: dict[str, bool] | None = None
+    skills: dict[str, bool] | None = None
+    integrations: list[dict[str, Any]] | None = None
+
+
+@router.get("/apps/permissions")
+async def get_app_permissions():
+    """Retrieve active app and tool allowlist/denylist."""
+    from app.agent.permissions import get_permissions
+    return get_permissions()
+
+
+@router.post("/apps/permissions")
+async def update_app_permissions(req: UpdatePermissionsRequest):
+    """Update active permissions when user toggles apps or skills in the UI."""
+    from app.agent.permissions import update_permissions
+    payload = {}
+    if req.apps is not None:
+        payload["apps"] = req.apps
+    if req.skills is not None:
+        payload["skills"] = req.skills
+    if req.integrations is not None:
+        payload["integrations"] = req.integrations
+    updated = update_permissions(payload)
+    return {"success": True, "permissions": updated}
+
 

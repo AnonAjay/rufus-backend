@@ -1,0 +1,30 @@
+{
+  "apps": {
+    "whatsapp": true,
+    "vscode": true,
+    "antigravity": true,
+    "spotify": true,
+    "chrome": true,
+    "browser": true,
+    "explorer": true,
+    "brave": true,
+    "discord": true
+  },
+  "skills": {
+    "web_search": true,
+    "system_volume": true,
+    "screen_brightness": true,
+    "inspect_screen": true,
+    "capture_screenshot": true,
+    "spotify_control": true,
+    "whatsapp_send_message": true,
+    "whatsapp_get_last_interaction": true,
+    "whatsapp_search_contacts": true,
+    "whatsapp_list_messages": true,
+    "whatsapp_save_contact": true,
+    "robot_stunt": true,
+    "save_user_memory": true,
+    "lock_workstation": true,
+    "open_website": true
+  }
+}

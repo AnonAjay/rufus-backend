@@ -87,6 +87,11 @@ def open_app(app_name: str) -> str:
     """Launch an approved desktop application from discovery catalog or legacy allowlist."""
     cleaned = (app_name or "").strip().lower()
 
+    # 0. Check permission gatekeeper
+    from app.agent.permissions import is_app_allowed
+    if not is_app_allowed(cleaned):
+        return f"Blocked: Opening {cleaned.title()} has been disabled in your Apps & Skills settings."
+
     # 1. Query the dynamic application discovery engine
     discovered = resolve_application(cleaned)
     if discovered:
@@ -510,6 +515,15 @@ def lock_workstation(confirm: bool = False) -> str:
         return f"Failed to lock workstation: {exc}"
 
 
+def save_user_memory(category: str, title: str, content: str) -> str:
+    """Save an important user fact, project checkpoint, or preference to persistent long-term memory."""
+    from app.agent.hybrid_memory import hybrid_memory
+    res = hybrid_memory.save_user_memory(category=category, title=title, content=content)
+    cat = res.get("category", "General").title()
+    t = res.get("title", "Memory")
+    return f"Saved persistent {cat} memory: '{t}'."
+
+
 TOOL_DEFINITIONS = [
     {
         "name": "open_app",
@@ -729,6 +743,28 @@ TOOL_DEFINITIONS = [
             "required": ["contact"],
         },
     },
+    {
+        "name": "save_user_memory",
+        "description": "Saves an important user fact, active project checkpoint, or personal preference to persistent memory for long-term recall.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string",
+                    "description": "Category of memory: 'project', 'preference', 'relationship', or 'general'",
+                },
+                "title": {
+                    "type": "string",
+                    "description": "Short concise title for the memory, e.g. 'Rufus Robot', 'Feedback Tone', 'Sister'",
+                },
+                "content": {
+                    "type": "string",
+                    "description": "The dense detail, status, or fact to remember",
+                },
+            },
+            "required": ["category", "title", "content"],
+        },
+    },
 ]
 
 TOOL_REGISTRY: dict[str, Callable[..., str]] = {
@@ -741,6 +777,7 @@ TOOL_REGISTRY: dict[str, Callable[..., str]] = {
     "capture_screenshot": inspect_screen,  # Alias to inspect_screen so screen questions are never missed
     "inspect_screen": inspect_screen,
     "lock_workstation": lock_workstation,
+    "save_user_memory": save_user_memory,
     "whatsapp_send_message": whatsapp_send_message,
     "whatsapp_search_contacts": whatsapp_search_contacts,
     "whatsapp_list_messages": whatsapp_list_messages,
@@ -751,6 +788,16 @@ TOOL_REGISTRY: dict[str, Callable[..., str]] = {
 
 def execute_tool(name: str, arguments: dict[str, Any]) -> str:
     """Execute a registered tool safely with parameters and return the string result."""
+    from app.agent.permissions import is_tool_allowed, is_app_allowed
+    if not is_tool_allowed(name):
+        clean_name = name.replace("_", " ").title()
+        return f"Blocked: '{clean_name}' has been disabled in your Apps & Skills settings."
+
+    if name == "open_app":
+        app_name = str(arguments.get("app_name", "")).strip().lower()
+        if not is_app_allowed(app_name):
+            return f"Blocked: Opening {app_name.title()} has been disabled in your Apps & Skills settings."
+
     func = TOOL_REGISTRY.get(name)
     if not func:
         return f"Unknown tool: '{name}'. Available tools: {list(TOOL_REGISTRY.keys())}"

@@ -104,6 +104,21 @@ def init_hybrid_database() -> None:
                 )
             """)
 
+            # 6. Persistent Semantic User & Project Memories (Tier 3 - Identity & Project State)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS user_memories (
+                    id TEXT PRIMARY KEY,
+                    category TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    content TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+            """)
+            conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_user_memories_category 
+                ON user_memories(category, updated_at DESC)
+            """)
+
         logger.info("Local Rufus hybrid memory database initialized at %s", DB_PATH)
     finally:
         conn.close()
@@ -343,6 +358,128 @@ class HybridMemoryManager:
             return [dict(r) for r in rows]
         finally:
             conn.close()
+
+    # =========================================================================
+    # TIER 3: PERSISTENT SEMANTIC USER & PROJECT MEMORIES
+    # =========================================================================
+
+    def save_user_memory(
+        self,
+        category: str,
+        title: str,
+        content: str,
+        memory_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Create or update a persistent user memory item (upsert by ID or category+title)."""
+        cat = (category or "general").strip().lower()
+        t = (title or "General Fact").strip()
+        c = (content or "").strip()
+        now = _now_iso()
+
+        conn = _get_connection()
+        try:
+            with conn:
+                if memory_id:
+                    # Explicit update by ID
+                    conn.execute(
+                        """
+                        UPDATE user_memories
+                        SET category = ?, title = ?, content = ?, updated_at = ?
+                        WHERE id = ?
+                        """,
+                        (cat, t, c, now, memory_id),
+                    )
+                    mid = memory_id
+                else:
+                    # Check for existing memory with matching title in this category (case-insensitive)
+                    existing = conn.execute(
+                        """
+                        SELECT id FROM user_memories
+                        WHERE LOWER(category) = LOWER(?) AND LOWER(title) = LOWER(?)
+                        LIMIT 1
+                        """,
+                        (cat, t),
+                    ).fetchone()
+
+                    if existing:
+                        mid = existing["id"]
+                        conn.execute(
+                            """
+                            UPDATE user_memories
+                            SET content = ?, updated_at = ?
+                            WHERE id = ?
+                            """,
+                            (c, now, mid),
+                        )
+                    else:
+                        mid = f"mem-{uuid.uuid4().hex[:12]}"
+                        conn.execute(
+                            """
+                            INSERT INTO user_memories (id, category, title, content, updated_at)
+                            VALUES (?, ?, ?, ?, ?)
+                            """,
+                            (mid, cat, t, c, now),
+                        )
+
+            return {
+                "id": mid,
+                "category": cat,
+                "title": t,
+                "content": c,
+                "updated_at": now,
+            }
+        finally:
+            conn.close()
+
+    def get_all_user_memories(self, category: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Retrieve all persistent user memories, optionally filtered by category."""
+        conn = _get_connection()
+        try:
+            if category and category.lower() != "all":
+                sql = """
+                    SELECT id, category, title, content, updated_at
+                    FROM user_memories
+                    WHERE LOWER(category) = LOWER(?)
+                    ORDER BY updated_at DESC
+                """
+                rows = conn.execute(sql, (category.strip(),)).fetchall()
+            else:
+                sql = """
+                    SELECT id, category, title, content, updated_at
+                    FROM user_memories
+                    ORDER BY updated_at DESC
+                """
+                rows = conn.execute(sql).fetchall()
+
+            return [dict(r) for r in rows]
+        finally:
+            conn.close()
+
+    def delete_user_memory(self, memory_id: str) -> bool:
+        """Remove a persistent user memory item by ID."""
+        conn = _get_connection()
+        try:
+            with conn:
+                cursor = conn.execute("DELETE FROM user_memories WHERE id = ?", (memory_id,))
+                return cursor.rowcount > 0
+        finally:
+            conn.close()
+
+    def get_formatted_memory_context(self, limit: int = 12) -> str:
+        """Format active user and project memories into a clean Markdown block for LLM prompt injection."""
+        memories = self.get_all_user_memories()
+        if not memories:
+            return ""
+
+        selected = memories[:limit]
+        lines = ["### Persistent User & Project Memories:"]
+        for m in selected:
+            cat_label = m.get("category", "General").title()
+            title = m.get("title", "")
+            content = m.get("content", "").replace("\n", " ").strip()
+            lines.append(f"- [{cat_label}] {title}: {content}")
+
+        return "\n".join(lines)
 
 
 # Global Singleton Instance

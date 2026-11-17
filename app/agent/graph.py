@@ -1,5 +1,7 @@
-import re
+import asyncio
+import json
 import logging
+import re
 from typing import TypedDict, NotRequired
 
 from langgraph.graph import END, StateGraph
@@ -150,8 +152,12 @@ PERSONA_PROMPTS: dict[str, str] = {
 }
 
 def get_system_prompt(persona: str = "companion") -> str:
-    """Retrieve the specialized system prompt for the specified persona."""
-    return PERSONA_PROMPTS.get(persona, PERSONA_PROMPTS["companion"])
+    """Retrieve the specialized system prompt for the specified persona with injected persistent user memories."""
+    base_prompt = PERSONA_PROMPTS.get(persona, PERSONA_PROMPTS["companion"])
+    memory_context = hybrid_memory.get_formatted_memory_context(limit=10)
+    if memory_context:
+        return f"{base_prompt}\n\n{memory_context}"
+    return base_prompt
 
 
 SYSTEM_PROMPT = PERSONA_PROMPTS["companion"]
@@ -304,8 +310,11 @@ async def agent_node(state: AgentState) -> AgentState:
         {"role": "user", "content": user_message},
     ]
 
+    from app.agent.permissions import filter_tool_definitions
+    active_tools = filter_tool_definitions(TOOL_DEFINITIONS)
+
     try:
-        completion = await get_completion(current_messages, tools=TOOL_DEFINITIONS)
+        completion = await get_completion(current_messages, tools=active_tools)
     except TypeError:
         completion = await get_completion(current_messages)
 
@@ -355,6 +364,7 @@ MUTATION_TOOLS = {
     "system_volume",
     "screen_brightness",
     "lock_workstation",
+    "save_user_memory",
     "whatsapp_send_message",
     "whatsapp_save_contact",
     "robot_stunt",
@@ -385,7 +395,17 @@ async def tools_node(state: AgentState) -> AgentState:
 
         tool_result = execute_tool(tool_name, tool_args)
 
-        # Human-readable action badge and instant confirmation generation
+        # Gatekeeper: Handle disabled / blocked tool calls instantly
+        if tool_result.startswith("Blocked:"):
+            refusal_msg = tool_result.replace("Blocked:", "").strip()
+            clean_name = tool_name.replace("_", " ").title()
+            actions.append(f"Blocked: {clean_name}")
+            mutation_replies.append(refusal_msg)
+            current_messages.append({
+                "role": "user",
+                "content": f"[Tool execution blocked]: {refusal_msg}",
+            })
+            continue
         if tool_name == "open_app":
             app_name = str(tool_args.get("app_name", "Application")).strip()
             actions.append(f"Opened {app_name.title()}")
@@ -439,6 +459,11 @@ async def tools_node(state: AgentState) -> AgentState:
             stunt = str(tool_args.get("stunt", "stunt")).strip()
             actions.append(f"Executed robot stunt: {stunt.title()}")
             mutation_replies.append(f"I've executed the {stunt.title()} stunt on Rufus.")
+        elif tool_name == "save_user_memory":
+            title = str(tool_args.get("title", "Fact")).strip()
+            cat = str(tool_args.get("category", "General")).strip().title()
+            actions.append(f"Remembered: {title}")
+            mutation_replies.append(f"I've saved that to memory under {cat}: '{title}'.")
         elif tool_name in OBSERVATION_TOOLS or tool_name in {"capture_screenshot", "inspect_screen", "web_search", "whatsapp_get_last_interaction", "whatsapp_search_contacts", "whatsapp_list_messages"}:
             has_observation_tool = True
             if tool_name in {"capture_screenshot", "inspect_screen"}:
@@ -643,8 +668,58 @@ def _build_graph():
 agent_graph = _build_graph()
 
 
+async def _auto_extract_memory_background(user_msg: str, assistant_reply: str) -> None:
+    """Asynchronous background worker that distills persistent project updates or preferences into SQLite."""
+    text = (user_msg or "").strip()
+    if not text or len(text.split()) < 3:
+        return
+
+    lower = text.lower()
+    trigger_words = {
+        "project", "building", "working on", "built", "implemented",
+        "my name is", "i am", "prefer", "remember", "sister", "brother",
+        "mother", "father", "friend", "contact", "gpio", "hardware", "routine",
+    }
+    if not any(w in lower for w in trigger_words):
+        return
+
+    try:
+        extract_prompt = [
+            {
+                "role": "system",
+                "content": (
+                    "You are Rufus's quiet memory assistant. Extract long-term user identity facts, active project status, "
+                    "or personal preferences from this conversation turn. Return ONLY a JSON list of objects:\n"
+                    '[{"category": "project"|"preference"|"relationship"|"general", "title": "short handle", "content": "dense fact"}]\n'
+                    "If nothing worth remembering long-term, return: []"
+                ),
+            },
+            {
+                "role": "user",
+                "content": f"User: {text}\nAssistant: {assistant_reply[:300]}",
+            },
+        ]
+        completion = await get_completion(extract_prompt, tools=None)
+        raw_res = str(completion).strip()
+        # Parse JSON block
+        if "[" in raw_res and "]" in raw_res:
+            json_str = raw_res[raw_res.find("[") : raw_res.rfind("]") + 1]
+            items = json.loads(json_str)
+            if isinstance(items, list):
+                for item in items:
+                    if isinstance(item, dict) and item.get("title") and item.get("content"):
+                        hybrid_memory.save_user_memory(
+                            category=item.get("category", "general"),
+                            title=item["title"],
+                            content=item["content"],
+                        )
+                        logger.info("Auto-saved background memory: [%s] %s", item.get("category"), item["title"])
+    except Exception as exc:
+        logger.debug("Background memory extraction skipped: %s", exc)
+
+
 async def run_agent(session_id: str, message: str, persona: str = "companion") -> AgentState:
-    return await agent_graph.ainvoke(
+    state = await agent_graph.ainvoke(
         {
             "session_id": session_id,
             "message": message,
@@ -658,3 +733,6 @@ async def run_agent(session_id: str, message: str, persona: str = "companion") -
             "messages": [],
         }
     )
+    # Fire asynchronous background memory extraction (zero latency added to turn)
+    asyncio.create_task(_auto_extract_memory_background(message, state.get("reply", "")))
+    return state
