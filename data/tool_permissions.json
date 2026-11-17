@@ -8,7 +8,8 @@
     "browser": true,
     "explorer": true,
     "brave": true,
-    "discord": true
+    "discord": true,
+    "notion": false
   },
   "skills": {
     "web_search": true,
@@ -25,6 +26,11 @@
     "robot_stunt": true,
     "save_user_memory": true,
     "lock_workstation": true,
-    "open_website": true
+    "open_website": true,
+    "skill-volume": true,
+    "skill-display": true,
+    "skill-vision": true,
+    "skill-research": true,
+    "skill-focus": true
   }
 }
