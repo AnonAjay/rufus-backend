@@ -56,6 +56,18 @@ APP_ALLOWLIST = {
         "name": "File Explorer",
         "action": lambda: subprocess.Popen(["explorer.exe"], shell=False),
     },
+    "calculator": {
+        "name": "Calculator",
+        "action": lambda: subprocess.Popen(["calc.exe"], shell=False),
+    },
+    "calc": {
+        "name": "Calculator",
+        "action": lambda: subprocess.Popen(["calc.exe"], shell=False),
+    },
+    "notepad": {
+        "name": "Notepad",
+        "action": lambda: subprocess.Popen(["notepad.exe"], shell=False),
+    },
 }
 
 
@@ -84,8 +96,10 @@ def _launch_executable_or_protocol(target: str) -> None:
 
 
 def open_app(app_name: str) -> str:
-    """Launch an approved desktop application from discovery catalog or legacy allowlist."""
+    """Launch an approved desktop application from discovery catalog or allowlist."""
     cleaned = (app_name or "").strip().lower()
+    if not cleaned:
+        return "Please specify the name of the application you want to open."
 
     # 0. Check permission gatekeeper
     from app.agent.permissions import is_app_allowed
@@ -99,9 +113,9 @@ def open_app(app_name: str) -> str:
             success, msg = launch_application(discovered)
             return msg
         else:
-            return f"'{discovered['display_name']}' is recognized, but does not appear to be installed on your computer."
+            return f"Application '{discovered['display_name']}' is recognized, but does not appear to be installed on your computer."
 
-    # 2. Check legacy allowlist
+    # 2. Check allowlist (includes calculator, notepad, etc.)
     if cleaned in APP_ALLOWLIST:
         entry = APP_ALLOWLIST[cleaned]
         try:
@@ -111,12 +125,11 @@ def open_app(app_name: str) -> str:
             logger.error("Failed to launch %s: %s", cleaned, exc)
             return f"Failed to open {entry['name']}: {exc}"
 
-    # 3. Inform user of available applications
-    installed_apps = [a["display_name"] for a in get_installed_apps() if a.get("installed")]
-    sample_apps = sorted(set(installed_apps))[:8]
+    # 3. Inform user of available applications - STRICT error return, NO silent fallback
+    sample_apps = ["Calculator", "Notepad", "WhatsApp", "VS Code", "Chrome", "Spotify", "File Explorer"]
     return (
-        f"Application '{app_name}' is not recognized or not installed. "
-        f"Discovered installed apps include: {', '.join(sample_apps)}."
+        f"Application '{app_name}' is not recognized or not installed on your system. "
+        f"Supported applications include: {', '.join(sample_apps)}."
     )
 
 
@@ -527,13 +540,13 @@ def save_user_memory(category: str, title: str, content: str) -> str:
 TOOL_DEFINITIONS = [
     {
         "name": "open_app",
-        "description": "Opens an approved desktop application on Windows (WhatsApp, Antigravity, VS Code, Browser/Chrome, File Explorer).",
+        "description": "Opens an approved desktop application on Windows (Calculator, Notepad, WhatsApp, Antigravity, VS Code, Browser/Chrome, Spotify, File Explorer).",
         "parameters": {
             "type": "object",
             "properties": {
                 "app_name": {
                     "type": "string",
-                    "description": "Name of the application to open, e.g. 'whatsapp', 'vscode', 'browser', 'antigravity', 'explorer'",
+                    "description": "Name of the application to open, e.g. 'calculator', 'notepad', 'whatsapp', 'vscode', 'chrome', 'spotify', 'antigravity', 'explorer'",
                 }
             },
             "required": ["app_name"],

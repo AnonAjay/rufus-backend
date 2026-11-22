@@ -96,7 +96,7 @@ def sanitize_reply(text: str) -> str:
 # Persona System Prompts Matrix
 # ---------------------------------------------------------------------------
 SHARED_TOOL_CAPABILITIES = (
-    "You have access to tools to open discovered desktop applications (WhatsApp, VS Code, Chrome, Brave, Discord, Spotify, Antigravity, Explorer), "
+    "You have access to tools to open discovered desktop applications (Calculator, Notepad, WhatsApp, VS Code, Chrome, Brave, Discord, Spotify, Antigravity, Explorer), "
     "send WhatsApp messages, check replies via whatsapp_get_last_interaction, search contacts, save contact numbers, open websites, search the web / define concepts, "
     "control Spotify, adjust system volume and brightness, visually inspect the screen with vision AI, and lock the workstation. "
     "When the user asks what someone replied or asks about WhatsApp messages, call whatsapp_get_last_interaction. "
