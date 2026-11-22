@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 240" width="100%" height="240" fill="none">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#080a10" />
+      <stop offset="50%" stop-color="#0b1120" />
+      <stop offset="100%" stop-color="#05070a" />
+    </linearGradient>
+    <linearGradient id="cyanGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00e5ff" />
+      <stop offset="100%" stop-color="#38bdf8" />
+    </linearGradient>
+    <filter id="cyanGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    <filter id="subtleGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Outer Rounded Shell -->
+  <rect x="2" y="2" width="896" height="236" rx="16" fill="url(#bgGrad)" stroke="#1e293b" stroke-width="1.5" />
+  
+  <!-- Subtle Background Grid Accent -->
+  <g opacity="0.08" stroke="#00e5ff" stroke-width="1">
+    <line x1="40" y1="0" x2="40" y2="240" />
+    <line x1="120" y1="0" x2="120" y2="240" />
+    <line x1="200" y1="0" x2="200" y2="240" />
+    <line x1="0" y1="60" x2="900" y2="60" />
+    <line x1="0" y1="120" x2="900" y2="120" />
+    <line x1="0" y1="180" x2="900" y2="180" />
+  </g>
+
+  <!-- Cyan Tech Corner Accent -->
+  <path d="M16 48 L16 16 L48 16" stroke="#00e5ff" stroke-width="2.5" fill="none" opacity="0.8" />
+  <path d="M852 16 L884 16 L884 48" stroke="#00e5ff" stroke-width="2.5" fill="none" opacity="0.8" />
+  <path d="M16 192 L16 224 L48 224" stroke="#00e5ff" stroke-width="2.5" fill="none" opacity="0.8" />
+  <path d="M852 224 L884 224 L884 192" stroke="#00e5ff" stroke-width="2.5" fill="none" opacity="0.8" />
+
+  <!-- Animated Rufus Robot Eyes Logo Container -->
+  <g transform="translate(60, 68)">
+    <!-- OLED Bezel -->
+    <rect x="0" y="0" width="110" height="96" rx="18" fill="#030712" stroke="#00e5ff" stroke-width="1.8" filter="url(#subtleGlow)" />
+    
+    <!-- Eyes (Glowing Cyan Vertical Pills) -->
+    <rect x="24" y="22" width="22" height="52" rx="9" fill="#00e5ff" filter="url(#cyanGlow)">
+      <animate attributeName="height" values="52;52;4;52;52" keyTimes="0;0.92;0.95;0.98;1" dur="4.2s" repeatCount="indefinite" />
+      <animate attributeName="y" values="22;22;46;22;22" keyTimes="0;0.92;0.95;0.98;1" dur="4.2s" repeatCount="indefinite" />
+    </rect>
+    <rect x="64" y="22" width="22" height="52" rx="9" fill="#00e5ff" filter="url(#cyanGlow)">
+      <animate attributeName="height" values="52;52;4;52;52" keyTimes="0;0.92;0.95;0.98;1" dur="4.2s" repeatCount="indefinite" />
+      <animate attributeName="y" values="22;22;46;22;22" keyTimes="0;0.92;0.95;0.98;1" dur="4.2s" repeatCount="indefinite" />
+    </rect>
+  </g>
+
+  <!-- Typography & Headings -->
+  <g transform="translate(200, 72)">
+    <!-- Small Tagline / Architecture Badge -->
+    <rect x="0" y="0" width="186" height="22" rx="5" fill="rgba(0, 229, 255, 0.12)" stroke="rgba(0, 229, 255, 0.3)" />
+    <text x="10" y="15" fill="#38bdf8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" font-weight="700" letter-spacing="1">SYSTEM 1 AGENT CORE</text>
+
+    <!-- Main Title -->
+    <text x="0" y="58" fill="#f8fafc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="34" font-weight="800" letter-spacing="-0.5">RUFUS BACKEND</text>
+
+    <!-- Subtitle / Value Proposition -->
+    <text x="0" y="86" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14.5" font-weight="500">
+      Production Agent Architecture • LangGraph Engine • Laya ModernBERT Router • Safe Tool Execution
+    </text>
+  </g>
+
+  <!-- Tech Badges Footer Cluster -->
+  <g transform="translate(200, 182)">
+    <!-- Badge 1: FastAPI -->
+    <rect x="0" y="0" width="88" height="26" rx="6" fill="#0f172a" stroke="#334155" />
+    <text x="44" y="17" fill="#cbd5e1" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11.5" font-weight="600" text-anchor="middle">FastAPI</text>
+
+    <!-- Badge 2: LangGraph -->
+    <rect x="96" y="0" width="102" height="26" rx="6" fill="#0f172a" stroke="#334155" />
+    <text x="147" y="17" fill="#cbd5e1" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11.5" font-weight="600" text-anchor="middle">LangGraph</text>
+
+    <!-- Badge 3: Laya Router -->
+    <rect x="206" y="0" width="128" height="26" rx="6" fill="#0f172a" stroke="#00e5ff" stroke-width="1.2" />
+    <text x="270" y="17" fill="#00e5ff" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11.5" font-weight="700" text-anchor="middle">Laya ModernBERT</text>
+
+    <!-- Badge 4: Local Ollama -->
+    <rect x="342" y="0" width="118" height="26" rx="6" fill="#0f172a" stroke="#334155" />
+    <text x="401" y="17" fill="#cbd5e1" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11.5" font-weight="600" text-anchor="middle">Llama-3.2 3B</text>
+
+    <!-- Badge 5: Faster-Whisper -->
+    <rect x="468" y="0" width="116" height="26" rx="6" fill="#0f172a" stroke="#334155" />
+    <text x="526" y="17" fill="#cbd5e1" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11.5" font-weight="600" text-anchor="middle">Whisper + Piper</text>
+
+    <!-- Badge 6: Mosquitto MQTT -->
+    <rect x="592" y="0" width="68" height="26" rx="6" fill="#0f172a" stroke="#334155" />
+    <text x="626" y="17" fill="#cbd5e1" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11.5" font-weight="600" text-anchor="middle">MQTT</text>
+  </g>
+</svg>
