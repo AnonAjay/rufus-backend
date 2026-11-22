@@ -105,14 +105,13 @@ SHARED_TOOL_CAPABILITIES = (
     "Never output raw JSON in your spoken reply."
 )
 
-PERSONA_PROMPTS: dict[str, str] = {
+PERSONA_BASE_PROMPTS: dict[str, str] = {
     # 1. Desktop Companion (Default: Voice-friendly, warm, concise, punchy)
     "companion": (
         "You are Rufus, an embodied AI companion robot dog and desktop assistant. "
         "Keep replies voice-friendly: use 1-3 short spoken sentences unless the user explicitly asks for more detail. "
         "Do not use markdown, bullet points, headers, or numbered lists because replies will be read aloud through text-to-speech. "
-        "Ask at most one question per reply. After an action executes, confirm it warmly in one short sentence.\n\n"
-        + SHARED_TOOL_CAPABILITIES
+        "Ask at most one question per reply. After an action executes, confirm it warmly in one short sentence."
     ),
     # 2. Instructor (Pedagogical tutor, first-principles, citations, Socratic check)
     "instructor": (
@@ -124,8 +123,7 @@ PERSONA_PROMPTS: dict[str, str] = {
         "3. Use clear analogies, mental models, and real-world system architecture examples.\n"
         "4. Provide authoritative citations, academic references, RFCs, and official documentation links where relevant.\n"
         "5. Conclude with a sharp Socratic recall check question to verify the user's understanding.\n"
-        "Format your responses cleanly with Markdown headers, bold highlights, and structured bullet points.\n\n"
-        + SHARED_TOOL_CAPABILITIES
+        "Format your responses cleanly with Markdown headers, bold highlights, and structured bullet points."
     ),
     # 3. Researcher (Evidence-driven synthesis, literature analysis, structured reports)
     "researcher": (
@@ -135,9 +133,7 @@ PERSONA_PROMPTS: dict[str, str] = {
         "1. Synthesize multi-source technical findings, contrasting trade-offs, state-of-the-art benchmarks, and empirical data.\n"
         "2. Highlight concrete facts, failure modes, scalability limits, and theoretical invariants.\n"
         "3. Structure output in professional Markdown reports with executive summaries, comparative tables, and cited findings.\n"
-        "4. Maintain a neutral, precise, and intellectually honest tone with zero marketing hype or filler.\n"
-        "Use web_search and screen inspection tools actively to gather empirical ground truth when needed.\n\n"
-        + SHARED_TOOL_CAPABILITIES
+        "4. Maintain a neutral, precise, and intellectually honest tone with zero marketing hype or filler."
     ),
     # 4. Coding Assistant (Elite systems engineer, code-centric, terse, zero filler)
     "coder": (
@@ -147,14 +143,18 @@ PERSONA_PROMPTS: dict[str, str] = {
         "1. Lead with the complete, production-ready code block FIRST in standard markdown code fences (```lang ... ```). Skip conversational pleasantries, filler phrases, and generic introductions.\n"
         "2. Write idiomatic, production-ready code with complete syntax highlighting, strict types, and robust error handling.\n"
         "3. Surface subtle edge cases, race conditions, memory leaks, security vulnerabilities, and typing pitfalls immediately after the code.\n"
-        "4. Explain architectural choices bluntly: why this approach over alternatives, what could break, and which file to inspect first.\n\n"
-        + SHARED_TOOL_CAPABILITIES
+        "4. Explain architectural choices bluntly: why this approach over alternatives, what could break, and which file to inspect first."
     ),
 }
 
-def get_system_prompt(persona: str = "companion") -> str:
+PERSONA_PROMPTS: dict[str, str] = {
+    p: f"{base}\n\n{SHARED_TOOL_CAPABILITIES}" for p, base in PERSONA_BASE_PROMPTS.items()
+}
+
+def get_system_prompt(persona: str = "companion", include_tools: bool = True) -> str:
     """Retrieve the specialized system prompt for the specified persona with injected persistent user memories."""
-    base_prompt = PERSONA_PROMPTS.get(persona, PERSONA_PROMPTS["companion"])
+    source_dict = PERSONA_PROMPTS if include_tools else PERSONA_BASE_PROMPTS
+    base_prompt = source_dict.get(persona, source_dict["companion"])
     memory_context = hybrid_memory.get_formatted_memory_context(limit=10)
     if memory_context:
         return f"{base_prompt}\n\n{memory_context}"
@@ -242,7 +242,7 @@ async def chat_node(state: AgentState) -> AgentState:
             cleaned_history.append({"role": role, "content": clean_c})
 
     persona = state.get("persona", "companion")
-    system_prompt = get_system_prompt(persona)
+    system_prompt = get_system_prompt(persona, include_tools=False)
 
     current_messages = [
         {"role": "system", "content": system_prompt},
@@ -284,6 +284,62 @@ async def chat_node(state: AgentState) -> AgentState:
     }
 
 
+def scope_tools_for_query(query: str, active_tools: list[dict]) -> list[dict]:
+    """
+    Tier 3: Dynamically scope active tools by intent domain to prevent 3B model attention leakage.
+    Ensures small local models only see relevant tools for the requested action category.
+    """
+    q = query.lower()
+
+    def _get_name(t: dict) -> str:
+        return t.get("name") or t.get("function", {}).get("name") or ""
+
+    # 1. System controls (volume, sound, mute, brightness, workstation lock)
+    if any(k in q for k in ["volume", "sound", "aawaz", "mute", "unmute", "audio", "brightness", "lock workstation", "lock screen", "lock pc", "lock computer"]):
+        allowed = {"system_volume", "screen_brightness", "lock_workstation"}
+        scoped = [t for t in active_tools if _get_name(t) in allowed]
+        if scoped:
+            return scoped
+
+    # 2. Application launches (desktop apps & web navigation)
+    if any(k in q for k in ["open", "launch", "start", "calculator", "calc", "notepad", "chrome", "vscode", "explorer", "khol", "kholo"]):
+        allowed = {"open_app", "open_website"}
+        scoped = [t for t in active_tools if _get_name(t) in allowed]
+        if scoped:
+            return scoped
+
+    # 3. WhatsApp messaging & contacts
+    if any(k in q for k in ["whatsapp", "text to", "message to", "bhejo"]):
+        allowed = {"whatsapp_send_message", "whatsapp_get_last_interaction", "whatsapp_search_contacts", "whatsapp_list_messages", "whatsapp_save_contact"}
+        scoped = [t for t in active_tools if _get_name(t) in allowed]
+        if scoped:
+            return scoped
+
+    # 4. Media & Music (Spotify)
+    if any(k in q for k in ["spotify", "song", "track", "music", "play", "pause", "resume", "skip", "gaana"]):
+        allowed = {"spotify_control"}
+        scoped = [t for t in active_tools if _get_name(t) in allowed]
+        if scoped:
+            return scoped
+
+    # 5. Live observation & Vision AI (search & screen inspection)
+    if any(k in q for k in ["search", "weather", "forecast", "news", "price", "stock", "look up", "screen", "display", "monitor", "screenshot", "terminal", "dekho"]):
+        allowed = {"web_search", "inspect_screen", "capture_screenshot"}
+        scoped = [t for t in active_tools if _get_name(t) in allowed]
+        if scoped:
+            return scoped
+
+    # 6. Physical stunts
+    if any(k in q for k in ["sit", "stand", "wag", "bark", "dance", "stunt"]):
+        allowed = {"robot_stunt"}
+        scoped = [t for t in active_tools if _get_name(t) in allowed]
+        if scoped:
+            return scoped
+
+    # Fallback: expose all active tools
+    return active_tools
+
+
 async def agent_node(state: AgentState) -> AgentState:
     """
     Full action deliberation node (invoked with tools=TOOL_DEFINITIONS).
@@ -302,7 +358,7 @@ async def agent_node(state: AgentState) -> AgentState:
             cleaned_history.append({"role": role, "content": clean_c})
 
     persona = state.get("persona", "companion")
-    system_prompt = get_system_prompt(persona)
+    system_prompt = get_system_prompt(persona, include_tools=True)
 
     current_messages = [
         {"role": "system", "content": system_prompt},
@@ -313,6 +369,7 @@ async def agent_node(state: AgentState) -> AgentState:
 
     from app.agent.permissions import filter_tool_definitions
     active_tools = filter_tool_definitions(TOOL_DEFINITIONS)
+    active_tools = scope_tools_for_query(user_message, active_tools)
 
     try:
         completion = await get_completion(current_messages, tools=active_tools)
@@ -457,6 +514,9 @@ def coerce_and_validate_tool_args(tool_name: str, raw_args: dict[str, Any]) -> t
     return cleaned_args, None
 
 
+CONFIRMATION_REQUIRED_TOOLS = {"whatsapp_send_message", "lock_workstation"}
+
+
 async def tools_node(state: AgentState) -> AgentState:
     """Execute emitted tool calls against strict allowlists and bifurcate mutation vs observation."""
     tool_calls = state.get("tool_calls", [])
@@ -474,6 +534,35 @@ async def tools_node(state: AgentState) -> AgentState:
             mutation_replies.append(clarif_err)
             actions.append(f"Prompted clarification for {tool_name}")
             continue
+
+        # Confirmation Gate for high-impact mutation tools
+        if tool_name in CONFIRMATION_REQUIRED_TOOLS:
+            last_assistant_msg = ""
+            for m in reversed(current_messages):
+                if m.get("role") in {"assistant", "rufus"} and m.get("content"):
+                    last_assistant_msg = m["content"].lower()
+                    break
+
+            user_text = state.get("message", "").strip().lower()
+            is_confirmed = (
+                ("confirm" in last_assistant_msg or "sure you want" in last_assistant_msg)
+                and any(w in user_text for w in ["yes", "confirm", "proceed", "sure", "send it", "do it", "yep", "ok", "haan"])
+            )
+
+            if not is_confirmed:
+                clean_name = tool_name.replace("_", " ").title()
+                if tool_name == "whatsapp_send_message":
+                    recip = str(tool_args.get("recipient", "the recipient")).strip().title()
+                    body = str(tool_args.get("message", "")).strip()
+                    prompt_msg = f"Are you sure you want me to send this WhatsApp message to {recip}: '{body}'? Please confirm with yes or no."
+                elif tool_name == "lock_workstation":
+                    prompt_msg = "Are you sure you want me to lock your workstation? Please confirm with yes or no."
+                else:
+                    prompt_msg = f"Are you sure you want me to execute {clean_name}? Please confirm with yes or no."
+
+                actions.append(f"Awaiting confirmation for {clean_name}")
+                mutation_replies.append(prompt_msg)
+                continue
 
         logger.info("Executing tool: %s with args: %s", tool_name, tool_args)
 

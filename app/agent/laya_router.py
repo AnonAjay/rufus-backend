@@ -74,26 +74,37 @@ DECISION_QUESTIONS = {
     },
 }
 
-# Fast regex patterns for resilient fallback
+# Fast regex patterns for resilient fallback and semantic validation
 ACTION_PATTERNS = [
     # OS & App launches (exclude 'open source', 'open question')
-    r"\b(?:open|launch|start|run|close)\b.*?\b(?:app|chrome|browser|vscode|code|whatsapp|spotify|explorer|terminal|antigravity|notepad)\b",
+    r"\b(?:open|launch|start|run|close)\b.*?\b(?:app|chrome|browser|vscode|code|whatsapp|spotify|explorer|terminal|antigravity|notepad|calculator|calc)\b",
     r"\b(?:open|launch|start)\s+(?!source\b|question\b|world\b|mind\b)[a-z0-9_\-\.]+",
     # WhatsApp messaging
     r"\b(?:send|whatsapp|text|message)\b.*?\b(?:to|saying|that)\b",
     r"\b(?:what\s+did\s+\w+\s+reply|check\s+whatsapp|whatsapp\s+message)\b",
     # Media & system controls (avoid bare 'spotify' in conversational context)
     r"\b(?:play|pause|resume|skip|mute|unmute)\b",
-    r"\b(?:spotify|volume|brightness)\s+(?:up|down|to|\d+|track|song|playlist|music|percent)",
-    r"\b(?:turn\s+(?:up|down)|set\s+(?:volume|brightness)|mute\s+(?:sound|system|volume))",
+    r"\b(?:spotify|volume|brightness|sound|audio)\s+(?:up|down|to|\d+|track|song|playlist|music|percent|higher|lower|a\s+bit|thoda|thodi)",
+    r"\b(?:turn\s+(?:up|down)|set\s+(?:volume|brightness)|mute\s+(?:sound|system|volume)|silence\s+(?:the\s+)?(?:master\s+)?volume|restore\s+(?:sound|audio|volume))",
+    r"\b(?:increase|decrease|lower|raise)\s+(?:the\s+)?(?:volume|sound|audio|brightness)\b",
+    # Live search & Online Information Retrieval (weather, stocks, news, scores)
+    r"\b(?:search\s+(?:the\s+web|online|google|internet)|look\s+up|find\s+online)\b",
+    r"\b(?:search\s+(?:online|the\s+web|google)\s+for|look\s+up)\b.*?\b(?:weather|forecast|temperature|stock|price|news|score|rates?|gold|release)\b",
     # Vision & Screen inspection
-    r"\b(?:inspect|screenshot|what'?s\s+on\s+(?:my\s+)?screen|look\s+at\s+(?:my\s+)?screen|read\s+(?:the\s+)?screen)\b",
+    r"\b(?:inspect|take\s+a\s+screenshot|capture\s+(?:the\s+)?screen|what'?s\s+on\s+(?:my\s+)?screen|look\s+at\s+(?:my\s+)?screen|read\s+(?:the\s+)?(?:screen|monitor|display|terminal))\b",
     # Physical stunts / Robot movements
     r"\b(?:sit|stand|wag|backflip|dance|walk|bark|stunt|move)\b",
     # Productivity & Timers
     r"\b(?:set\s+(?:a\s+)?timer|start\s+(?:a\s+)?timer|focus\s+mode|pomodoro)\b",
     # System locks
     r"\b(?:lock\s+(?:my\s+)?(?:pc|computer|workstation|screen))\b",
+    # Hinglish operational commands
+    r"\b(?:aawaz|sound)\s+(?:thodi\s+)?(?:kam|badha|badhao|chup|dheemi)\b",
+    r"\b(?:gaane\s+ki\s+aawaz|speaker\s+ki\s+aawaz)\b.*?\b(?:kam|badha|badhao|dheemi)\b",
+    r"\b(?:notepad|calculator|calc|whatsapp|chrome|browser)\s+(?:khol|kholo|chalao|band\s+kar)\b",
+    r"\b(?:khol|kholo|chalao|band\s+karo?)\s+(?:do\s+)?.*?\b(?:notepad|calculator|calc|whatsapp|chrome|browser)\b",
+    r"\b(?:screen|display)\s+(?:dekh|dekho|check\s+karo?)\b",
+    r"\b(?:search\s+karo?|online\s+search\s+karo?|mausam\s+kaisa\s+hai)\b",
 ]
 
 SPEECH_PATTERNS = [
@@ -267,18 +278,29 @@ def classify_intent(text: str) -> ClassificationResult:
                         "reason": f"Pure knowledge inquiry routed to speech ({persona_choice} mode)",
                     }
 
-                # Action safety threshold for ambiguous inputs
-                if action_prob > 0.25 and action_choice == "speech" and not (is_conceptual or is_coding or is_research):
-                    logger.info(
-                        "Laya action probability %.2f > 0.25 on non-knowledge input; fail-safing to 'action'",
-                        action_prob,
-                    )
+                # Tier 2 Action-Intent Gating & Logit Calibration
+                # Case A: Laya predicted 'action', but utterance lacks any verified action verb or tool target.
+                # Demote uncalibrated false-actions (e.g. "Hi Rufus!", "Tell me a joke") to speech.
+                if action_choice == "action" and not has_action_verb:
+                    logger.info("Laya predicted action without operational verb/target; Tier 2 demoting to speech path.")
+                    return {
+                        "action_type": "speech",
+                        "persona_intent": "companion",
+                        "confidence": max(0.88, 1.0 - action_prob),
+                        "source": "tier2_action_intent_gate",
+                        "reason": "Utterance lacks verified operational verb or target entity",
+                    }
+
+                # Case B: Laya predicted 'speech', but utterance contains explicit operational command.
+                # Promote to action path (e.g. "mute", "volume 65", "open calculator").
+                if action_choice == "speech" and has_action_verb:
+                    logger.info("Operational command detected in Tier 2 pre-check; promoting to action path.")
                     return {
                         "action_type": "action",
                         "persona_intent": persona_choice,
-                        "confidence": action_prob,
-                        "source": "laya_guardrail",
-                        "reason": f"Ambiguous speech with action_prob={action_prob:.2f}",
+                        "confidence": 0.95,
+                        "source": "tier2_action_intent_gate",
+                        "reason": "Matched verified operational action pattern",
                     }
 
                 if action_choice in {"speech", "action"}:
