@@ -3,7 +3,7 @@ import json
 import logging
 import os
 import re
-from typing import TypedDict, NotRequired
+from typing import Any, TypedDict, NotRequired
 
 from langgraph.graph import END, StateGraph
 
@@ -381,6 +381,82 @@ OBSERVATION_TOOLS = {
 }
 
 
+def coerce_and_validate_tool_args(tool_name: str, raw_args: dict[str, Any]) -> tuple[dict[str, Any], str | None]:
+    """
+    Schema-driven coercion and validation for tool arguments:
+    - Drops unknown keys and logs them.
+    - Coerces numeric strings to int or float with a log line.
+    - Handles schema aliases (e.g. system_volume parameter 'level' vs 'value').
+    - Clamps volume level to 0-100.
+    - Rejects invalid non-numeric values with a clarification question.
+    Returns: (cleaned_args, clarification_error_msg_or_none)
+    """
+    tool_def = next((t for t in TOOL_DEFINITIONS if t.get("name") == tool_name), None)
+    if not tool_def or "parameters" not in tool_def:
+        return dict(raw_args), None
+
+    schema_props = tool_def["parameters"].get("properties", {})
+    cleaned_args: dict[str, Any] = {}
+
+    normalized_raw = dict(raw_args)
+    if tool_name == "system_volume":
+        if "value" in normalized_raw and "level" not in normalized_raw:
+            normalized_raw["level"] = normalized_raw.pop("value")
+
+    # Drop unknown keys and log them
+    for k, v in normalized_raw.items():
+        if k not in schema_props:
+            logger.warning("Tool '%s': dropped unknown parameter '%s' with value %r", tool_name, k, v)
+            continue
+
+        prop_spec = schema_props[k]
+        prop_type = prop_spec.get("type", "string")
+
+        if prop_type in {"integer", "number"}:
+            if v is not None:
+                try:
+                    num_val = float(str(v).replace("%", "").strip())
+                    if prop_type == "integer":
+                        coerced = int(round(num_val))
+                    else:
+                        coerced = num_val
+                    if isinstance(v, str):
+                        logger.info("Tool '%s': coerced parameter '%s' from string '%s' to %s %s", tool_name, k, v, prop_type, coerced)
+                    cleaned_args[k] = coerced
+                except (ValueError, TypeError):
+                    if tool_name == "system_volume" and k == "level":
+                        return {}, "Could you please specify the volume level as a number between 0 and 100?"
+                    logger.warning("Tool '%s': non-numeric value %r for parameter '%s'", tool_name, v, k)
+                    return {}, f"Could you please specify a valid number for {k}?"
+            else:
+                cleaned_args[k] = None
+        elif prop_type == "boolean":
+            if isinstance(v, bool):
+                cleaned_args[k] = v
+            else:
+                s = str(v).strip().lower()
+                coerced_b = s in {"true", "1", "yes"}
+                logger.info("Tool '%s': coerced parameter '%s' from string '%s' to boolean %s", tool_name, k, v, coerced_b)
+                cleaned_args[k] = coerced_b
+        else:
+            cleaned_args[k] = v
+
+    # Tool-specific validation & clamping
+    if tool_name == "system_volume":
+        action = str(cleaned_args.get("action", "get")).strip().lower()
+        level = cleaned_args.get("level")
+        if action == "set":
+            if level is None:
+                return {}, "What volume level (0 to 100) would you like me to set?"
+            clamped = max(0, min(100, int(level)))
+            if clamped != level:
+                logger.info("Tool 'system_volume': clamped level from %s to %d", level, clamped)
+            cleaned_args["level"] = clamped
+            cleaned_args["value"] = clamped  # backward compat
+
+    return cleaned_args, None
+
+
 async def tools_node(state: AgentState) -> AgentState:
     """Execute emitted tool calls against strict allowlists and bifurcate mutation vs observation."""
     tool_calls = state.get("tool_calls", [])
@@ -391,7 +467,14 @@ async def tools_node(state: AgentState) -> AgentState:
 
     for call in tool_calls:
         tool_name = call.get("name", "")
-        tool_args = call.get("arguments", {})
+        raw_args = call.get("arguments", {})
+
+        tool_args, clarif_err = coerce_and_validate_tool_args(tool_name, raw_args)
+        if clarif_err:
+            mutation_replies.append(clarif_err)
+            actions.append(f"Prompted clarification for {tool_name}")
+            continue
+
         logger.info("Executing tool: %s with args: %s", tool_name, tool_args)
 
         tool_result = execute_tool(tool_name, tool_args)
@@ -429,11 +512,23 @@ async def tools_node(state: AgentState) -> AgentState:
                 actions.append(f"Spotify: {cmd.title()}")
                 mutation_replies.append(f"Spotify {cmd.title()} executed.")
         elif tool_name == "system_volume":
-            val = tool_args.get("value")
-            act = str(tool_args.get("action", "adjusted")).strip()
-            if val is not None:
-                actions.append(f"Set system volume to {val}%")
-                mutation_replies.append(f"I've set the system volume to {val}%.")
+            lvl = tool_args.get("level") if "level" in tool_args else tool_args.get("value")
+            act = str(tool_args.get("action", "adjusted")).strip().lower()
+            if act == "set" and lvl is not None:
+                actions.append(f"Set system volume to {lvl}%")
+                mutation_replies.append(f"I've set the system volume to {lvl}%.")
+            elif act == "mute":
+                actions.append("Muted system volume")
+                mutation_replies.append("I've muted the system volume.")
+            elif act == "unmute":
+                actions.append("Unmuted system volume")
+                mutation_replies.append("I've unmuted the system volume.")
+            elif act == "up":
+                actions.append("Increased system volume")
+                mutation_replies.append("I've increased the system volume for you.")
+            elif act == "down":
+                actions.append("Decreased system volume")
+                mutation_replies.append("I've decreased the system volume for you.")
             else:
                 actions.append(f"Adjusted system volume ({act})")
                 mutation_replies.append("I've adjusted the system volume for you.")
