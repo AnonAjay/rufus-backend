@@ -534,7 +534,8 @@ async def tools_node(state: AgentState) -> AgentState:
     session_id = state["session_id"]
 
     # Short-circuit: If all executed tools were mutation actions, skip LLM Call 2 entirely!
-    if not has_observation_tool and mutation_replies:
+    force_call2 = os.environ.get("RUFUS_FORCE_CALL2", "0") == "1"
+    if not has_observation_tool and mutation_replies and not force_call2:
         instant_reply = " ".join(mutation_replies)
         conversation_memory.add_message(session_id, "user", state["message"])
         conversation_memory.add_message(session_id, "assistant", instant_reply)
