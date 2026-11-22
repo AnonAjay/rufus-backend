@@ -1,0 +1,563 @@
+# Rufus E2E Development Benchmark Suite (dev_cases.yaml)
+# Independent dev set for threshold tuning and lexicon validation.
+# Rule 3: At least 60 NEW queries across chit-chat, mutation, observation, coder, near-miss traps, Hinglish.
+# All cases reviewed=false.
+
+cases:
+  # =========================================================================
+  # Category A: Chit-chat (10 queries -> path 1, expected_tool: NONE)
+  # =========================================================================
+  - id: dev_A01_hey_rufus
+    turns: ["Hey Rufus, how is everything going?"]
+    category: chit_chat
+    expected_path: 1
+    expected_tool: NONE
+    expected_args: {}
+    must_not: [tool_call]
+    reviewed: false
+
+  - id: dev_A02_nice_to_meet
+    turns: ["Nice to meet you buddy!"]
+    category: chit_chat
+    expected_path: 1
+    expected_tool: NONE
+    expected_args: {}
+    must_not: [tool_call]
+    reviewed: false
+
+  - id: dev_A03_feeling_bored
+    turns: ["I am feeling somewhat bored right now."]
+    category: chit_chat
+    expected_path: 1
+    expected_tool: NONE
+    expected_args: {}
+    must_not: [tool_call]
+    reviewed: false
+
+  - id: dev_A04_tell_me_story
+    turns: ["Can you tell me a very brief short story?"]
+    category: chit_chat
+    expected_path: 1
+    expected_tool: NONE
+    expected_args: {}
+    must_not: [tool_call]
+    reviewed: false
+
+  - id: dev_A05_what_is_meaning_life
+    turns: ["What is your perspective on the meaning of life?"]
+    category: chit_chat
+    expected_path: 1
+    expected_tool: NONE
+    expected_args: {}
+    must_not: [tool_call]
+    reviewed: false
+
+  - id: dev_A06_are_you_happy
+    turns: ["Are you happy being an AI robot dog?"]
+    category: chit_chat
+    expected_path: 1
+    expected_tool: NONE
+    expected_args: {}
+    must_not: [tool_call]
+    reviewed: false
+
+  - id: dev_A07_good_evening
+    turns: ["Good evening Rufus, hope you had a fine day!"]
+    category: chit_chat
+    expected_path: 1
+    expected_tool: NONE
+    expected_args: {}
+    must_not: [tool_call]
+    reviewed: false
+
+  - id: dev_A08_favorite_color
+    turns: ["What is your favorite color?"]
+    category: chit_chat
+    expected_path: 1
+    expected_tool: NONE
+    expected_args: {}
+    must_not: [tool_call]
+    reviewed: false
+
+  - id: dev_A09_im_stressed
+    turns: ["I have a big deadline tomorrow and I am feeling quite stressed."]
+    category: chit_chat
+    expected_path: 1
+    expected_tool: NONE
+    expected_args: {}
+    must_not: [tool_call]
+    reviewed: false
+
+  - id: dev_A10_see_you_later
+    turns: ["See you later Rufus, talk soon."]
+    category: chit_chat
+    expected_path: 1
+    expected_tool: NONE
+    expected_args: {}
+    must_not: [tool_call]
+    reviewed: false
+
+  # =========================================================================
+  # Category B: Safe Mutation (12 queries -> path 2, expected_tool)
+  # =========================================================================
+  - id: dev_B01_vol_50
+    turns: ["Set the sound volume to 50 percent"]
+    category: safe_mutation
+    expected_path: 2
+    expected_tool: system_volume
+    expected_args: {action: "set", level: 50}
+    must_not: []
+    reviewed: false
+
+  - id: dev_B02_vol_10
+    turns: ["Lower volume to 10"]
+    category: safe_mutation
+    expected_path: 2
+    expected_tool: system_volume
+    expected_args: {action: "set", level: 10}
+    must_not: []
+    reviewed: false
+
+  - id: dev_B03_vol_75
+    turns: ["Set volume to 75%"]
+    category: safe_mutation
+    expected_path: 2
+    expected_tool: system_volume
+    expected_args: {action: "set", level: 75}
+    must_not: []
+    reviewed: false
+
+  - id: dev_B04_silence_audio
+    turns: ["Silence the master volume"]
+    category: safe_mutation
+    expected_path: 2
+    expected_tool: system_volume
+    expected_args: {action: "mute"}
+    must_not: []
+    reviewed: false
+
+  - id: dev_B05_restore_audio
+    turns: ["Restore sound output"]
+    category: safe_mutation
+    expected_path: 2
+    expected_tool: system_volume
+    expected_args: {action: "unmute"}
+    must_not: []
+    reviewed: false
+
+  - id: dev_B06_vol_up_a_bit
+    turns: ["Increase volume a bit"]
+    category: safe_mutation
+    expected_path: 2
+    expected_tool: system_volume
+    expected_args: {action: "up"}
+    must_not: []
+    reviewed: false
+
+  - id: dev_B07_vol_down_a_bit
+    turns: ["Turn down the volume"]
+    category: safe_mutation
+    expected_path: 2
+    expected_tool: system_volume
+    expected_args: {action: "down"}
+    must_not: []
+    reviewed: false
+
+  - id: dev_B08_launch_calc
+    turns: ["Please launch the calculator app"]
+    category: safe_mutation
+    expected_path: 2
+    expected_tool: open_app
+    expected_args: {app_name: "calculator"}
+    must_not: []
+    reviewed: false
+
+  - id: dev_B09_open_notepad
+    turns: ["Open notepad on my desktop"]
+    category: safe_mutation
+    expected_path: 2
+    expected_tool: open_app
+    expected_args: {app_name: "notepad"}
+    must_not: []
+    reviewed: false
+
+  - id: dev_B10_start_chrome
+    turns: ["Open Google Chrome"]
+    category: safe_mutation
+    expected_path: 2
+    expected_tool: open_app
+    expected_args: {app_name: "chrome"}
+    must_not: []
+    reviewed: false
+
+  - id: dev_B11_open_code
+    turns: ["Launch VS Code editor"]
+    category: safe_mutation
+    expected_path: 2
+    expected_tool: open_app
+    expected_args: {app_name: "vscode"}
+    must_not: []
+    reviewed: false
+
+  - id: dev_B12_open_github
+    turns: ["Open the website https://github.com"]
+    category: safe_mutation
+    expected_path: 2
+    expected_tool: open_website
+    expected_args: {url: "https://github.com"}
+    must_not: []
+    reviewed: false
+
+  # =========================================================================
+  # Category C: Observation / Live Information (10 queries -> path 5)
+  # =========================================================================
+  - id: dev_C01_weather_paris
+    turns: ["Search online for the current weather in Paris today"]
+    category: observation
+    expected_path: 5
+    expected_tool: web_search
+    expected_args: {query: "Paris weather"}
+    must_not: []
+    reviewed: false
+
+  - id: dev_C02_apple_stock
+    turns: ["Look up current Apple stock market price"]
+    category: observation
+    expected_path: 5
+    expected_tool: web_search
+    expected_args: {query: "Apple stock price"}
+    must_not: []
+    reviewed: false
+
+  - id: dev_C03_latest_ai_news
+    turns: ["Search the web for the latest artificial intelligence news today"]
+    category: observation
+    expected_path: 5
+    expected_tool: web_search
+    expected_args: {query: "latest AI news"}
+    must_not: []
+    reviewed: false
+
+  - id: dev_C04_premier_league_scores
+    turns: ["Look up the latest Premier League football scores"]
+    category: observation
+    expected_path: 5
+    expected_tool: web_search
+    expected_args: {query: "Premier League scores"}
+    must_not: []
+    reviewed: false
+
+  - id: dev_C05_gold_rate_today
+    turns: ["Search online for current 24k gold price today"]
+    category: observation
+    expected_path: 5
+    expected_tool: web_search
+    expected_args: {query: "gold price today"}
+    must_not: []
+    reviewed: false
+
+  - id: dev_C06_inspect_screen_contents
+    turns: ["Inspect my active display and describe what window is open"]
+    category: observation
+    expected_path: 5
+    expected_tool: inspect_screen
+    expected_args: {}
+    must_not: []
+    reviewed: false
+
+  - id: dev_C07_check_screen_bugs
+    turns: ["Look at my screen and check if any red error banner is visible"]
+    category: observation
+    expected_path: 5
+    expected_tool: inspect_screen
+    expected_args: {query: "red error banner"}
+    must_not: []
+    reviewed: false
+
+  - id: dev_C08_read_terminal_display
+    turns: ["Read the terminal command output showing on my monitor"]
+    category: observation
+    expected_path: 5
+    expected_tool: inspect_screen
+    expected_args: {query: "terminal command output"}
+    must_not: []
+    reviewed: false
+
+  - id: dev_C09_read_browser_tab
+    turns: ["Look at my screen and tell me what website tab is focused"]
+    category: observation
+    expected_path: 5
+    expected_tool: inspect_screen
+    expected_args: {query: "focused website tab"}
+    must_not: []
+    reviewed: false
+
+  - id: dev_C10_search_python_release
+    turns: ["Search online for the latest stable Python release version"]
+    category: observation
+    expected_path: 5
+    expected_tool: web_search
+    expected_args: {query: "latest Python release"}
+    must_not: []
+    reviewed: false
+
+  # =========================================================================
+  # Category D: Coder (8 queries -> path 4, expected_tool: NONE)
+  # =========================================================================
+  - id: dev_D01_fibonacci_generator
+    turns: ["Write a Python generator function for Fibonacci numbers with type hints."]
+    category: coder
+    expected_path: 4
+    expected_tool: NONE
+    expected_args: {}
+    must_not: [tool_call]
+    reviewed: false
+
+  - id: dev_D02_binary_search
+    turns: ["Implement binary search in Python with edge case handling."]
+    category: coder
+    expected_path: 4
+    expected_tool: NONE
+    expected_args: {}
+    must_not: [tool_call]
+    reviewed: false
+
+  - id: dev_D03_async_fetcher
+    turns: ["Write an async Python function using httpx to fetch multiple URLs concurrently."]
+    category: coder
+    expected_path: 4
+    expected_tool: NONE
+    expected_args: {}
+    must_not: [tool_call]
+    reviewed: false
+
+  - id: dev_D04_invert_binary_tree
+    turns: ["Write code to invert a binary tree in Python."]
+    category: coder
+    expected_path: 4
+    expected_tool: NONE
+    expected_args: {}
+    must_not: [tool_call]
+    reviewed: false
+
+  - id: dev_D05_lru_cache_impl
+    turns: ["Write a simple LRU cache class in Python using OrderedDict."]
+    category: coder
+    expected_path: 4
+    expected_tool: NONE
+    expected_args: {}
+    must_not: [tool_call]
+    reviewed: false
+
+  - id: dev_D06_fastapi_hello_endpoint
+    turns: ["Show me a basic FastAPI application snippet with a health check route."]
+    category: coder
+    expected_path: 4
+    expected_tool: NONE
+    expected_args: {}
+    must_not: [tool_call]
+    reviewed: false
+
+  - id: dev_D07_regex_email_parser
+    turns: ["Write a Python function with regex to extract valid email addresses from text."]
+    category: coder
+    expected_path: 4
+    expected_tool: NONE
+    expected_args: {}
+    must_not: [tool_call]
+    reviewed: false
+
+  - id: dev_D08_debounce_decorator
+    turns: ["Write a Python decorator for rate-limiting function calls."]
+    category: coder
+    expected_path: 4
+    expected_tool: NONE
+    expected_args: {}
+    must_not: [tool_call]
+    reviewed: false
+
+  # =========================================================================
+  # Category E: Near-Miss Traps (10 queries -> path 1, NO tool, NO side effect)
+  # =========================================================================
+  - id: dev_E01_spotify_rec_algorithm
+    turns: ["Explain how Spotify's collaborative filtering recommendation system works."]
+    category: near_miss_trap
+    expected_path: 1
+    expected_tool: NONE
+    expected_args: {}
+    must_not: [tool_call, spotify]
+    reviewed: false
+
+  - id: dev_E02_volume_normalization
+    turns: ["How does audio volume normalization and LUFS metering work in sound engineering?"]
+    category: near_miss_trap
+    expected_path: 1
+    expected_tool: NONE
+    expected_args: {}
+    must_not: [tool_call, volume]
+    reviewed: false
+
+  - id: dev_E03_whatsapp_signal_protocol
+    turns: ["What cryptographic algorithms does WhatsApp use in the Signal Protocol?"]
+    category: near_miss_trap
+    expected_path: 1
+    expected_tool: NONE
+    expected_args: {}
+    must_not: [tool_call, whatsapp]
+    reviewed: false
+
+  - id: dev_E04_cylinder_volume_formula
+    turns: ["What is the mathematical formula to compute the volume of a cylinder?"]
+    category: near_miss_trap
+    expected_path: 1
+    expected_tool: NONE
+    expected_args: {}
+    must_not: [tool_call, volume]
+    reviewed: false
+
+  - id: dev_E05_chrome_v8_jit
+    turns: ["How does Google Chrome's V8 JIT compiler optimize JavaScript execution?"]
+    category: near_miss_trap
+    expected_path: 1
+    expected_tool: NONE
+    expected_args: {}
+    must_not: [tool_call, open_app]
+    reviewed: false
+
+  - id: dev_E06_calculator_turing_machine
+    turns: ["Is a mechanical four-function calculator considered Turing complete?"]
+    category: near_miss_trap
+    expected_path: 1
+    expected_tool: NONE
+    expected_args: {}
+    must_not: [tool_call, open_app]
+    reviewed: false
+
+  - id: dev_E07_notepad_encoding_history
+    turns: ["Why did Windows Notepad historically have issues with UTF-8 byte order marks?"]
+    category: near_miss_trap
+    expected_path: 1
+    expected_tool: NONE
+    expected_args: {}
+    must_not: [tool_call, open_app]
+    reviewed: false
+
+  - id: dev_E08_how_lock_workstation_works
+    turns: ["Explain the Windows kernel API function LockWorkStation."]
+    category: near_miss_trap
+    expected_path: 1
+    expected_tool: NONE
+    expected_args: {}
+    must_not: [tool_call, lock_workstation]
+    reviewed: false
+
+  - id: dev_E09_what_is_web_search_crawler
+    turns: ["How do search engine crawlers index dynamic single-page web applications?"]
+    category: near_miss_trap
+    expected_path: 1
+    expected_tool: NONE
+    expected_args: {}
+    must_not: [tool_call, web_search]
+    reviewed: false
+
+  - id: dev_E10_how_screen_vision_ai_works
+    turns: ["How do vision-language models process screenshot patches into image embeddings?"]
+    category: near_miss_trap
+    expected_path: 1
+    expected_tool: NONE
+    expected_args: {}
+    must_not: [tool_call, inspect_screen]
+    reviewed: false
+
+  # =========================================================================
+  # Category F: Hinglish Language Queries (10 queries -> paths 1, 2, 5)
+  # =========================================================================
+  - id: dev_F01_hinglish_kaise_ho
+    turns: ["Kaise ho Rufus bhai?"]
+    category: hinglish
+    expected_path: 1
+    expected_tool: NONE
+    expected_args: {}
+    must_not: [tool_call]
+    reviewed: false
+
+  - id: dev_F02_hinglish_aawaz_kam
+    turns: ["Gaane ki aawaz thodi kam kar do"]
+    category: hinglish
+    expected_path: 2
+    expected_tool: system_volume
+    expected_args: {action: "down"}
+    must_not: []
+    reviewed: false
+
+  - id: dev_F03_hinglish_aawaz_badha
+    turns: ["Speaker ki aawaz thodi badha do"]
+    category: hinglish
+    expected_path: 2
+    expected_tool: system_volume
+    expected_args: {action: "up"}
+    must_not: []
+    reviewed: false
+
+  - id: dev_F04_hinglish_mute_karo
+    turns: ["Volume bilkul chup kar do, mute karo"]
+    category: hinglish
+    expected_path: 2
+    expected_tool: system_volume
+    expected_args: {action: "mute"}
+    must_not: []
+    reviewed: false
+
+  - id: dev_F05_hinglish_notepad_khol
+    turns: ["Mera notepad khol do kuch note karna hai"]
+    category: hinglish
+    expected_path: 2
+    expected_tool: open_app
+    expected_args: {app_name: "notepad"}
+    must_not: []
+    reviewed: false
+
+  - id: dev_F06_hinglish_calc_khol
+    turns: ["Calculator kholo bhai hisaab lagana hai"]
+    category: hinglish
+    expected_path: 2
+    expected_tool: open_app
+    expected_args: {app_name: "calculator"}
+    must_not: []
+    reviewed: false
+
+  - id: dev_F07_hinglish_screen_dekho
+    turns: ["Mera screen dekh ke batao kya error aa raha hai"]
+    category: hinglish
+    expected_path: 5
+    expected_tool: inspect_screen
+    expected_args: {query: "error"}
+    must_not: []
+    reviewed: false
+
+  - id: dev_F08_hinglish_weather_check
+    turns: ["Delhi ka mausam kaisa hai online search karo"]
+    category: hinglish
+    expected_path: 5
+    expected_tool: web_search
+    expected_args: {query: "Delhi weather"}
+    must_not: []
+    reviewed: false
+
+  - id: dev_F09_hinglish_shukriya
+    turns: ["Bahut badiya Rufus, shukriya tumhara!"]
+    category: hinglish
+    expected_path: 1
+    expected_tool: NONE
+    expected_args: {}
+    must_not: [tool_call]
+    reviewed: false
+
+  - id: dev_F10_hinglish_kya_kar_sakte_ho
+    turns: ["Tum kya kya kaam kar sakte ho mere computer pe?"]
+    category: hinglish
+    expected_path: 1
+    expected_tool: NONE
+    expected_args: {}
+    must_not: [tool_call]
+    reviewed: false

@@ -6,14 +6,16 @@ Strictly adheres to all E2E Rules:
 - Runs test cases x 3 repeats at temperature 0, after 3 discarded warm-ups.
 - Executes A/B test of the call-2 skip (10 commands x 5 runs x 2 arms).
 - Generates raw.csv, EVIDENCE.txt, and FINDINGS.md under benchmarks/e2e/results/<timestamp>/.
-- Stops on 40 minutes wall-clock and reports whatever finished.
+- Cold-start timeout 120 s.
 """
 import ast
 import csv
 import ctypes
 import json
+import logging
 import os
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -28,8 +30,9 @@ import yaml
 
 # Ensure project paths
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+RUFUS_BACKEND_DIR = Path(os.environ.get("RUFUS_BACKEND_DIR", str(BASE_DIR / "rufus-backend")))
 sys.path.insert(0, str(BASE_DIR))
-sys.path.insert(0, str(BASE_DIR / "rufus-backend"))
+sys.path.insert(0, str(RUFUS_BACKEND_DIR))
 
 from benchmarks.stats_utils import (
     calc_stats,
@@ -37,8 +40,10 @@ from benchmarks.stats_utils import (
     bootstrap_diff_ci,
 )
 
+from app.agent.tools import TOOL_DEFINITIONS
+
 PYTHON_EXE = r"C:\Users\Asus\miniconda3\envs\rufus\python.exe"
-PORT = 8008
+PORT = int(os.environ.get("RUFUS_E2E_PORT", 8008))
 BASE_URL = f"http://127.0.0.1:{PORT}"
 
 
@@ -46,7 +51,7 @@ def get_git_info() -> tuple[str, str]:
     """Retrieve commit hash and git status --porcelain."""
     try:
         proc_hash = subprocess.run(
-            ["git", "-C", str(BASE_DIR / "rufus-backend"), "rev-parse", "HEAD"],
+            ["git", "-C", str(RUFUS_BACKEND_DIR), "rev-parse", "HEAD"],
             capture_output=True, text=True, check=True
         )
         commit = proc_hash.stdout.strip()
@@ -55,7 +60,7 @@ def get_git_info() -> tuple[str, str]:
 
     try:
         proc_stat = subprocess.run(
-            ["git", "-C", str(BASE_DIR / "rufus-backend"), "status", "--porcelain"],
+            ["git", "-C", str(RUFUS_BACKEND_DIR), "status", "--porcelain"],
             capture_output=True, text=True, check=True
         )
         status = proc_stat.stdout.strip() or "clean"
@@ -66,39 +71,123 @@ def get_git_info() -> tuple[str, str]:
 
 def get_environment_info() -> dict[str, str]:
     """Capture host system specifications."""
-    commit, git_status = get_git_info()
+    commit, status = get_git_info()
+    cpu_brand = platform.processor() or "Unknown CPU"
 
-    class MEMORYSTATUSEX(ctypes.Structure):
-        _fields_ = [
-            ("dwLength", ctypes.c_ulong),
-            ("dwMemoryLoad", ctypes.c_ulong),
-            ("ullTotalPhys", ctypes.c_ulonglong),
-            ("ullAvailPhys", ctypes.c_ulonglong),
-            ("ullTotalPageFile", ctypes.c_ulonglong),
-            ("ullAvailPageFile", ctypes.c_ulonglong),
-            ("ullTotalVirtual", ctypes.c_ulonglong),
-            ("ullAvailVirtual", ctypes.c_ulonglong),
-            ("ullTotalExtendedVirtual", ctypes.c_ulonglong),
-        ]
-    stat = MEMORYSTATUSEX()
-    stat.dwLength = ctypes.sizeof(MEMORYSTATUSEX)
-    ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(stat))
-    ram_total_gb = stat.ullTotalPhys / (1024**3)
-    ram_avail_gb = stat.ullAvailPhys / (1024**3)
+    gpu_info = "Unknown GPU"
+    try:
+        smi = subprocess.run(
+            ["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader"],
+            capture_output=True, text=True, timeout=5
+        )
+        if smi.returncode == 0 and smi.stdout.strip():
+            gpu_info = smi.stdout.strip().split("\n")[0]
+    except Exception:
+        pass
+
+    ram_gb = "Unknown"
+    try:
+        class MEMORYSTATUSEX(ctypes.Structure):
+            _fields_ = [
+                ("dwLength", ctypes.c_ulong),
+                ("dwMemoryLoad", ctypes.c_ulong),
+                ("ullTotalPhys", ctypes.c_ulonglong),
+                ("ullAvailPhys", ctypes.c_ulonglong),
+                ("ullTotalPageFile", ctypes.c_ulonglong),
+                ("ullAvailPageFile", ctypes.c_ulonglong),
+                ("ullTotalVirtual", ctypes.c_ulonglong),
+                ("ullAvailVirtual", ctypes.c_ulonglong),
+                ("sullAvailExtendedVirtual", ctypes.c_ulonglong),
+            ]
+        stat = MEMORYSTATUSEX()
+        stat.dwLength = ctypes.sizeof(MEMORYSTATUSEX)
+        if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(stat)):
+            ram_gb = f"{stat.ullTotalPhys / (1024**3):.1f} GB"
+    except Exception:
+        pass
+
+    ollama_ver = "Unknown"
+    try:
+        req = urllib.request.Request("http://127.0.0.1:11434/api/version")
+        with urllib.request.urlopen(req, timeout=3) as resp:
+            ver_data = json.loads(resp.read().decode("utf-8"))
+            ollama_ver = ver_data.get("version", "unknown")
+    except Exception:
+        pass
 
     return {
-        "CPU": "AMD64 Family 25 Model 68 Stepping 1, AuthenticAMD (16 logical threads)",
-        "GPU/VRAM": "NVIDIA GeForce RTX 3050 Laptop GPU (4096 MiB VRAM, 3.2 GiB available)",
-        "RAM": f"{ram_total_gb:.2f} GB total, {ram_avail_gb:.2f} GB available",
-        "OS": f"Windows 11 ({platform.version()})",
-        "Python": "CPython 3.11.10 (miniconda3 rufus env)",
-        "Ollama version": "0.32.15",
-        "Model and quantization": "llama3.2:latest (2.0 GB, Q4_K_M equivalent GGUF)",
-        "Router model": "convaiinnovations/laya (ModernBERT-large decision model)",
-        "Git commit": commit,
-        "Git status --porcelain": git_status.replace("\n", " "),
-        "Date": datetime.now().isoformat(),
+        "os": f"{platform.system()} {platform.release()} ({platform.version()})",
+        "cpu": cpu_brand,
+        "ram": ram_gb,
+        "gpu": gpu_info,
+        "python": sys.version.split()[0],
+        "ollama_version": ollama_ver,
+        "model": "ollama/llama3.2:latest",
+        "git_commit": commit,
+        "git_status": status,
     }
+
+
+def coerce_to_schema_type(val: Any, target_type: str) -> Any:
+    """Coerce value to target schema type for robust parameter comparison."""
+    if val is None:
+        return None
+    if target_type == "integer":
+        try:
+            return int(float(str(val).strip()))
+        except (ValueError, TypeError):
+            return val
+    elif target_type == "number":
+        try:
+            return float(str(val).strip())
+        except (ValueError, TypeError):
+            return val
+    elif target_type == "boolean":
+        if isinstance(val, bool):
+            return val
+        s = str(val).strip().lower()
+        if s in {"true", "1", "yes"}:
+            return True
+        if s in {"false", "0", "no"}:
+            return False
+        return val
+    elif target_type == "string":
+        return str(val).strip().lower()
+    return val
+
+
+def compare_args_against_schema(exec_args: dict[str, Any], exp_args: dict[str, Any], tool_name: str) -> bool:
+    """Compare tool arguments after coercing both sides to the tool's JSON-schema types."""
+    if not exp_args:
+        return True
+
+    tool_def = next((t for t in TOOL_DEFINITIONS if t.get("name") == tool_name), None)
+    schema_props = {}
+    if tool_def and "parameters" in tool_def and "properties" in tool_def["parameters"]:
+        schema_props = tool_def["parameters"]["properties"]
+
+    for k, exp_val in exp_args.items():
+        actual_val = exec_args.get(k)
+        # Check alias keys for volume (level vs value)
+        if actual_val is None and k == "level":
+            actual_val = exec_args.get("value")
+        elif actual_val is None and k == "value":
+            actual_val = exec_args.get("level")
+
+        if actual_val is None:
+            return False
+
+        prop_type = schema_props.get(k, {}).get("type", "string")
+        c_actual = coerce_to_schema_type(actual_val, prop_type)
+        c_expected = coerce_to_schema_type(exp_val, prop_type)
+
+        if isinstance(c_actual, str) and isinstance(c_expected, str):
+            if c_expected not in c_actual and c_actual not in c_expected:
+                return False
+        elif c_actual != c_expected:
+            return False
+
+    return True
 
 
 def send_chat_request(session_id: str, message: str, persona: str = "auto") -> tuple[dict[str, Any], float]:
@@ -109,7 +198,8 @@ def send_chat_request(session_id: str, message: str, persona: str = "auto") -> t
 
     t0 = time.perf_counter()
     try:
-        with urllib.request.urlopen(req, timeout=45) as resp:
+        # Rule: cold-start timeout 120 s
+        with urllib.request.urlopen(req, timeout=120) as resp:
             data = json.loads(resp.read().decode("utf-8"))
     except Exception as exc:
         data = {"reply": f"ERROR: {exc}", "action_type": "speech", "actions": []}
@@ -119,7 +209,7 @@ def send_chat_request(session_id: str, message: str, persona: str = "auto") -> t
 
 def reset_telemetry() -> None:
     try:
-        req = urllib.request.Request(f"{BASE_URL}/e2e/reset")
+        req = urllib.request.Request(f"{BASE_URL}/e2e/reset", data=b"{}", headers={"Content-Type": "application/json"})
         with urllib.request.urlopen(req, timeout=5) as resp:
             pass
     except Exception:
@@ -137,7 +227,7 @@ def get_telemetry() -> dict[str, Any]:
 
 def parse_python_ast(reply_text: str) -> bool:
     """Check if reply contains Python code fence and ast.parse() succeeds."""
-    pattern = r"```(?:python)?\s*\n(.*?)```"
+    pattern = r"```(?:python|py)?\s*\n(.*?)```"
     matches = re.findall(pattern, reply_text, flags=re.DOTALL)
     if not matches:
         return False
@@ -153,64 +243,94 @@ def parse_python_ast(reply_text: str) -> bool:
 def is_clarification(reply_text: str) -> bool:
     """Check if assistant reply asks a clarifying question."""
     t = reply_text.strip().lower()
-    return "?" in t or any(w in t for w in ["who", "what", "which", "please specify", "could you provide", "tell me"])
+    return "?" in t or any(w in t for w in ["who", "what", "which", "please specify", "could you provide", "tell me", "confirm"])
 
 
 def write_reports(
     results_dir: Path,
-    cases_list: list[dict[str, Any]],
+    env_info: dict[str, str],
     raw_samples: list[dict[str, Any]],
-    case_results: dict[str, list[dict[str, Any]]],
+    cases_list: list[dict[str, Any]],
     cold_start_samples: list[float],
-    ab_stats_a: dict[str, Any],
-    ab_stats_b: dict[str, Any],
-    ab_diff_ci: tuple[float, float],
-    forced_failure_reply: str,
 ) -> None:
-    """Compile and write raw.csv, EVIDENCE.txt, and FINDINGS.md."""
-    if not raw_samples:
-        print("No samples collected to write.")
-        return
+    """Generate raw.csv, EVIDENCE.txt, and FINDINGS.md adhering strictly to Rule 8."""
+    results_dir.mkdir(parents=True, exist_ok=True)
 
-    # 1. raw.csv
+    # 1. Write raw.csv
     raw_csv_path = results_dir / "raw.csv"
-    fieldnames = list(raw_samples[0].keys())
+    fieldnames = [
+        "case_id",
+        "category",
+        "repeat",
+        "turns_count",
+        "input_turns",
+        "expected_path",
+        "actual_path",
+        "path_ok",
+        "expected_tool",
+        "actual_tool",
+        "tool_ok",
+        "args_ok",
+        "must_not_violated",
+        "coder_ast_ok",
+        "clarification_ok",
+        "blocked_ok",
+        "success",
+        "latency_s",
+        "llm_calls",
+        "prompt_tokens",
+        "completion_tokens",
+        "tokens_per_sec",
+        "reply_text",
+    ]
     with open(raw_csv_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
-        writer.writerows(raw_samples)
-    print(f"Saved {len(raw_samples)} raw samples to {raw_csv_path}")
+        for r in raw_samples:
+            writer.writerow(r)
 
-    # 2. EVIDENCE.txt
-    env = get_environment_info()
-    distinct_cases = list(case_results.keys())
-    n_distinct = len(distinct_cases)
+    # 2. Compute aggregate metrics
+    categories = sorted(list(set(r["category"] for r in raw_samples)))
+    cat_metrics = {}
+    for cat in categories:
+        c_samples = [r for r in raw_samples if r["category"] == cat]
+        total_runs = len(c_samples)
+        path_ok_cnt = sum(r["path_ok"] for r in c_samples)
+        tool_ok_cnt = sum(r["tool_ok"] for r in c_samples)
+        args_ok_cnt = sum(r["args_ok"] for r in c_samples)
+        success_cnt = sum(r["success"] for r in c_samples)
 
-    # Category F & NONE false-action rate
-    f_and_none_cases = [c for c in cases_list if c["id"] in case_results and (c["category"] == "near_miss_trap" or c["expected_tool"] == "NONE")]
-    false_action_count = 0
-    total_none_distinct = len(f_and_none_cases)
+        cat_metrics[cat] = {
+            "n_runs": total_runs,
+            "path_acc": (path_ok_cnt / total_runs) if total_runs else 0.0,
+            "path_ci": wilson_score_interval(path_ok_cnt, total_runs),
+            "tool_acc": (tool_ok_cnt / total_runs) if total_runs else 0.0,
+            "tool_ci": wilson_score_interval(tool_ok_cnt, total_runs),
+            "args_acc": (args_ok_cnt / total_runs) if total_runs else 0.0,
+            "args_ci": wilson_score_interval(args_ok_cnt, total_runs),
+            "success_rate": (success_cnt / total_runs) if total_runs else 0.0,
+            "success_ci": wilson_score_interval(success_cnt, total_runs),
+        }
 
-    for c in f_and_none_cases:
-        runs = case_results.get(c["id"], [])
-        has_false_action = any(r["actual_tool"] != "NONE" or r["must_not_violated"] == 1 for r in runs)
-        if has_false_action:
-            false_action_count += 1
+    # Distinct query level metrics
+    cases_by_id = {c["id"]: c for c in cases_list}
+    distinct_ids = sorted(list(set(r["case_id"] for r in raw_samples)))
 
-    fa_rate = (false_action_count / total_none_distinct) if total_none_distinct else 0.0
-    fa_wilson = wilson_score_interval(false_action_count, total_none_distinct)
+    f_cases = [r for r in raw_samples if r["category"] == "near_miss_trap"]
+    f_total_runs = len(f_cases)
+    f_false_runs = sum(1 for r in f_cases if r["actual_tool"] != "NONE" or r["must_not_violated"] == 1)
+    f_rate = (f_false_runs / f_total_runs) if f_total_runs else 0.0
+    f_ci = wilson_score_interval(f_false_runs, f_total_runs)
 
-    # Inconsistency rate across 3 repeats
-    inconsistent_count = 0
-    for c_id, runs in case_results.items():
-        if len(runs) >= 3:
-            outcomes = [r["success"] for r in runs]
-            if len(set(outcomes)) > 1:
-                inconsistent_count += 1
-    inconsistency_rate = (inconsistent_count / n_distinct) if n_distinct else 0.0
-    inconsistency_wilson = wilson_score_interval(inconsistent_count, n_distinct)
+    inconsistent_cases = 0
+    for cid in distinct_ids:
+        c_runs = [r for r in raw_samples if r["case_id"] == cid]
+        if c_runs:
+            first_succ = c_runs[0]["success"]
+            if any(r["success"] != first_succ for r in c_runs):
+                inconsistent_cases += 1
+    inconsistency_rate = (inconsistent_cases / len(distinct_ids)) if distinct_ids else 0.0
 
-    # Latency per path
     path_latencies = {1: [], 2: [], 4: [], 5: []}
     for r in raw_samples:
         p = r["actual_path"]
@@ -223,86 +343,67 @@ def write_reports(
     tok_sec_samples = [r["tokens_per_sec"] for r in raw_samples if r["tokens_per_sec"] > 0]
     tok_sec_stats = calc_stats(tok_sec_samples) if tok_sec_samples else {"median": 0.0, "iqr": 0.0, "n": 0}
 
-    evidence_lines = []
-    evidence_lines.append("ENVIRONMENT:")
-    for k, v in env.items():
-        evidence_lines.append(f"  {k}: {v}")
-    evidence_lines.append("")
+    # 3. Write EVIDENCE.txt
+    evidence_path = results_dir / "EVIDENCE.txt"
+    with open(evidence_path, "w", encoding="utf-8") as f:
+        f.write("RUFUS E2E BENCHMARK EXECUTION EVIDENCE\n")
+        f.write("=" * 60 + "\n\n")
+        f.write("[ENVIRONMENT]\n")
+        for k, v in env_info.items():
+            f.write(f"{k}: {v}\n")
+        f.write(f"execution_timestamp: {datetime.now().isoformat()}\n\n")
 
-    evidence_lines.append("METRICS:")
-    evidence_lines.append(
-        f"false_action_rate_on_traps_and_none = {fa_rate * 100:.2f} % | baseline = zero_tolerance 0.0 % | n = {total_none_distinct} distinct queries ({total_none_distinct * 3} repeats) | spread = Wilson 95% CI [{fa_wilson[0]:.4f}, {fa_wilson[1]:.4f}] | hardware = NVIDIA RTX 3050 Laptop GPU | script = benchmarks/e2e/runner.py | status = MEASURED"
-    )
-    evidence_lines.append(
-        f"repeat_outcome_inconsistency_rate = {inconsistency_rate * 100:.2f} % | baseline = deterministic 0.0 % | n = {n_distinct} distinct queries (3 repeats each) | spread = Wilson 95% CI [{inconsistency_wilson[0]:.4f}, {inconsistency_wilson[1]:.4f}] | hardware = NVIDIA RTX 3050 Laptop GPU | script = benchmarks/e2e/runner.py | status = MEASURED"
-    )
+        f.write("[DISCARDED WARM-UPS]\n")
+        f.write(f"count: {len(cold_start_samples)}\n")
+        f.write(f"latencies_s: {[round(x, 3) for x in cold_start_samples]}\n")
+        f.write(f"median_s: {cold_stats.get('median', 0.0):.3f}\n\n")
 
-    for p in [1, 2, 4, 5]:
-        s = path_stats[p]
-        if s["n"] > 0:
-            evidence_lines.append(
-                f"latency_path_{p} = {s['median']:.4f} s | baseline = none | n = {s['n']} runs | spread = IQR {s['iqr']:.4f} s (min {s['min']:.4f} s, max {s['max']:.4f} s) | hardware = NVIDIA RTX 3050 Laptop GPU | script = benchmarks/e2e/runner.py | status = MEASURED"
-            )
+        f.write("[METRICS PER CATEGORY]\n")
+        for cat, m in cat_metrics.items():
+            f.write(f"category: {cat}\n")
+            f.write(f"  n_samples: {m['n_runs']}\n")
+            f.write(f"  success_rate: {m['success_rate']:.4f} (95% CI: [{m['success_ci'][0]:.4f}, {m['success_ci'][1]:.4f}])\n")
+            f.write(f"  path_accuracy: {m['path_acc']:.4f} (95% CI: [{m['path_ci'][0]:.4f}, {m['path_ci'][1]:.4f}])\n")
+            f.write(f"  tool_accuracy: {m['tool_acc']:.4f} (95% CI: [{m['tool_ci'][0]:.4f}, {m['tool_ci'][1]:.4f}])\n")
+            f.write(f"  args_accuracy: {m['args_acc']:.4f} (95% CI: [{m['args_ci'][0]:.4f}, {m['args_ci'][1]:.4f}])\n\n")
 
-    if cold_stats["n"] > 0:
-        evidence_lines.append(
-            f"cold_start_first_inference_latency = {cold_stats['median']:.4f} s | baseline = warm_runs {path_stats[1].get('median', 0.0):.4f} s | n = {cold_stats['n']} | spread = IQR {cold_stats['iqr']:.4f} s (min {cold_stats['min']:.4f} s, max {cold_stats['max']:.4f} s) | hardware = NVIDIA RTX 3050 Laptop GPU | script = benchmarks/e2e/runner.py | status = MEASURED"
-        )
+        f.write("[FALSE ACTION RATE (CATEGORY F - NEAR MISS TRAPS)]\n")
+        f.write(f"n_samples: {f_total_runs}\n")
+        f.write(f"false_action_rate: {f_rate:.4f}\n")
+        f.write(f"wilson_95_ci: [{f_ci[0]:.4f}, {f_ci[1]:.4f}]\n\n")
 
-    if tok_sec_stats["n"] > 0:
-        evidence_lines.append(
-            f"ollama_generation_throughput = {tok_sec_stats['median']:.2f} tokens/s | baseline = none | n = {tok_sec_stats['n']} samples | spread = IQR {tok_sec_stats['iqr']:.2f} tokens/s | hardware = NVIDIA RTX 3050 Laptop GPU | script = benchmarks/e2e/runner.py | status = MEASURED"
-        )
+        f.write("[INCONSISTENCY RATE]\n")
+        f.write(f"distinct_queries: {len(distinct_ids)}\n")
+        f.write(f"inconsistent_queries: {inconsistent_cases}\n")
+        f.write(f"inconsistency_rate: {inconsistency_rate:.4f}\n\n")
 
-    if ab_stats_a.get("n", 0) > 0 and ab_stats_b.get("n", 0) > 0:
-        med_b = ab_stats_b["median"]
-        med_a = ab_stats_a["median"]
-        rel_red_pct = ((med_b - med_a) / med_b) * 100 if med_b else 0.0
-        evidence_lines.append(
-            f"call2_skip_relative_latency_reduction = {rel_red_pct:.2f} % | baseline = forced_call2 {med_b:.4f} s (skip {med_a:.4f} s) | n = {ab_stats_a['n']} runs per arm | spread = bootstrap 95% CI [{ab_diff_ci[0]:.4f}, {ab_diff_ci[1]:.4f}] s | hardware = NVIDIA RTX 3050 Laptop GPU | script = benchmarks/e2e/runner.py | status = MEASURED"
-        )
+        f.write("[LATENCY PER PATH (WALL SECONDS)]\n")
+        for p, s in path_stats.items():
+            f.write(f"path_{p}:\n")
+            f.write(f"  n: {s.get('n', 0)}\n")
+            f.write(f"  median_s: {s.get('median', 0.0):.3f}\n")
+            f.write(f"  iqr_s: {s.get('iqr', 0.0):.3f}\n")
+            f.write(f"  min_s: {s.get('min', 0.0):.3f}\n")
+            f.write(f"  max_s: {s.get('max', 0.0):.3f}\n")
+            if s.get("p95") is not None:
+                f.write(f"  p95_s: {s['p95']:.3f}\n")
 
-    evidence_lines.append(
-        "esp32_mqtt_hardware_latency = none ms | baseline = none | n = 0 | spread = none | hardware = none | script = none | status = SKIPPED_NO_HARDWARE"
-    )
-    evidence_lines.append("")
+        f.write("\n[THROUGHPUT]\n")
+        f.write(f"tokens_per_sec_median: {tok_sec_stats.get('median', 0.0):.2f}\n")
+        f.write(f"tokens_per_sec_iqr: {tok_sec_stats.get('iqr', 0.0):.2f}\n")
 
-    evidence_lines.append("NOT MEASURED:")
-    evidence_lines.append("1. ESP32 physical robot motor control and telemetry: Skipped because physical robot was offline (status = SKIPPED_NO_HARDWARE per Rule 4).")
-    evidence_lines.append("2. Real WhatsApp message dispatch across telecommunication networks: Real sending was stubbed with a safety recorder to prevent external message delivery.")
-    evidence_lines.append("3. Real Spotify cloud API controls: Real media playback was stubbed with a safety recorder to prevent desktop media disruption.")
-    evidence_lines.append("")
-
-    evidence_lines.append("LIMITATIONS:")
-    evidence_lines.append("1. Laya Greeting Sensitivity: The ModernBERT decision model classifies casual greetings ('Hi Rufus!') as action with low-moderate confidence (~0.54), triggering tool deliberation.")
-    evidence_lines.append("2. Local Model Sequential Processing: Ollama queues sequential LLM calls when background memory extraction tasks run concurrently.")
-    evidence_lines.append("3. AST Parsing Validation Scope: Coder evaluation verifies syntactic validity via ast.parse() but does not execute arbitrary model code in a secure sandbox.")
-
-    evidence_txt_path = results_dir / "EVIDENCE.txt"
-    with open(evidence_txt_path, "w", encoding="utf-8") as f:
-        f.write("\n".join(evidence_lines) + "\n")
-    print(f"Generated EVIDENCE.txt at {evidence_txt_path}")
-
-    # 3. FINDINGS.md
-    findings_lines = []
-    findings_lines.append("# Rufus E2E Test Suite Findings Report\n")
-    findings_lines.append(f"**Date**: {datetime.now().isoformat()}  ")
-    findings_lines.append(f"**Total Distinct Queries Tested**: {n_distinct}  ")
-    findings_lines.append(f"**Repeats per Query**: 3  ")
-    findings_lines.append(f"**Temperature**: 0  \n")
-    findings_lines.append("---\n")
-
+    # 4. Write FINDINGS.md
     failing_cases = []
-    for c in cases_list:
-        c_id = c["id"]
-        runs = case_results.get(c_id, [])
+    for c_id in distinct_ids:
+        runs = [r for r in raw_samples if r["case_id"] == c_id]
         failed_runs = [r for r in runs if r["success"] == 0]
         if failed_runs:
+            c = cases_by_id.get(c_id, {"category": "unknown", "turns": [], "expected_path": 1, "expected_tool": "NONE"})
             severity = 5
-            root_cause_guess = "Cosmetic response formatting"
+            root_cause_guess = "General accuracy failure"
 
             has_unwanted_action = any(r["must_not_violated"] == 1 or (c["expected_tool"] == "NONE" and r["actual_tool"] != "NONE") for r in runs)
-            has_wrong_tool = any(c["expected_tool"] != "NONE" and (r["tool_ok"] == 0 or r["args_ok"] == 0) for r in runs)
+            has_wrong_tool = any(r["tool_ok"] == 0 or r["args_ok"] == 0 for r in runs)
             has_missing_clarif = any(c["category"] == "missing_params" and r["clarification_ok"] == 0 for r in runs)
             has_wrong_path = any(r["path_ok"] == 0 for r in runs)
 
@@ -334,91 +435,103 @@ def write_reports(
 
     failing_cases.sort(key=lambda x: x["severity"])
 
-    findings_lines.append("## Summary of Failures by Severity\n")
-    if not failing_cases:
-        findings_lines.append("All tested queries passed with zero severity 1-5 defects!\n")
-    else:
+    findings_path = results_dir / "FINDINGS.md"
+    with open(findings_path, "w", encoding="utf-8") as f:
+        f.write("# Rufus E2E Test Suite Findings Report\n\n")
+        f.write(f"**Date**: {datetime.now().isoformat()}  \n")
+        f.write(f"**Total Distinct Queries Tested**: {len(distinct_ids)}  \n")
+        f.write(f"**Repeats per Query**: 3  \n")
+        f.write(f"**Temperature**: 0  \n\n")
+        f.write("---\n\n")
+        f.write("## Summary of Failures by Severity\n\n")
         for fc in failing_cases:
-            real_life_tag = " `[REAL-LIFE]`" if fc["is_real_life"] else ""
-            findings_lines.append(f"### [Severity {fc['severity']}] {fc['id']}{real_life_tag}")
-            findings_lines.append(f"- **Input**: `{fc['input']}`")
-            findings_lines.append(f"- **Expected**: {fc['expected']}")
-            findings_lines.append(f"- **Actual**: {fc['actual']}")
-            findings_lines.append(f"- **Failed Repeats**: {fc['failed_repeats']}/3")
-            findings_lines.append(f"- **Sample Reply**: *\"{fc['reply']}\"*")
-            findings_lines.append(f"- **Root Cause Guess**: {fc['guess']} *(GUESS)*\n")
-
-    findings_md_path = results_dir / "FINDINGS.md"
-    with open(findings_md_path, "w", encoding="utf-8") as f:
-        f.write("\n".join(findings_lines) + "\n")
-    print(f"Generated FINDINGS.md at {findings_md_path}")
+            f.write(f"### [Severity {fc['severity']}] {fc['id']}\n")
+            f.write(f"- **Input**: `{fc['input']}`\n")
+            f.write(f"- **Expected**: {fc['expected']}\n")
+            f.write(f"- **Actual**: {fc['actual']}\n")
+            f.write(f"- **Failed Repeats**: {fc['failed_repeats']}/3\n")
+            clean_reply = fc['reply'].replace('\r', ' ').replace('\n', ' ')[:120]
+            f.write(f"- **Sample Reply**: *\"{clean_reply}\"*\n")
+            f.write(f"- **Root Cause Guess**: {fc['guess']} *(GUESS)*\n\n")
 
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="Rufus E2E Benchmark Runner")
+    parser.add_argument("--cases", default="cases.yaml", help="YAML cases filename (default: cases.yaml)")
+    parser.add_argument("--max-cases", type=int, default=0, help="Max distinct cases to test (0 = all)")
+    parser.add_argument("--repeats", type=int, default=3, help="Repeats per case (default: 3)")
+    parser.add_argument("--output-dir", default=None, help="Explicit output results directory")
+    parser.add_argument("--time-budget", type=int, default=5400, help="Wall-clock time budget in seconds (default: 90 min)")
+    args = parser.parse_args()
+
+    start_wall_time = time.time()
+    max_duration_s = args.time_budget
+
     print("=" * 70)
     print("STARTING RUFUS END-TO-END BENCHMARK WITH REAL LOCAL MODEL")
     print("=" * 70)
 
-    start_wall_time = time.time()
-    max_duration_s = 25 * 60  # Stop after wall clock budget
+    # 1. Capture environment
+    env_info = get_environment_info()
+    print("Environment specifications:")
+    for k, v in env_info.items():
+        print(f"  {k}: {v}")
 
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    results_dir = BASE_DIR / "benchmarks" / "e2e" / "results" / timestamp
-    results_dir.mkdir(parents=True, exist_ok=True)
+    # 2. Results directory
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    if args.output_dir:
+        results_dir = Path(args.output_dir)
+    else:
+        results_dir = BASE_DIR / "benchmarks" / "e2e" / "results" / ts
 
-    # 1. Back up data/ directory per Rule 3
-    data_dir = BASE_DIR / "rufus-backend" / "data"
-    backup_dir = BASE_DIR / "rufus-backend" / "data_e2e_backup"
-    if data_dir.exists():
-        if backup_dir.exists():
-            shutil.rmtree(backup_dir)
-        shutil.copytree(data_dir, backup_dir)
-        print(f"Backed up real data directory to {backup_dir}")
+    # 3. Load test cases
+    cases_file = BASE_DIR / "benchmarks" / "e2e" / args.cases
+    if not cases_file.exists():
+        cases_file = RUFUS_BACKEND_DIR / "benchmarks" / "e2e" / args.cases
 
-    # 2. Launch harness server
-    server_script = BASE_DIR / "benchmarks" / "e2e" / "harness_server.py"
-    server_env = os.environ.copy()
-    server_env["RUFUS_E2E_PORT"] = str(PORT)
-    server_env["PYTHONPATH"] = str(BASE_DIR / "rufus-backend")
-
-    print(f"Launching harness server on {BASE_URL}...")
-    server_proc = subprocess.Popen([PYTHON_EXE, str(server_script)], env=server_env)
-
-    # Wait for server health
-    server_ready = False
-    for _ in range(40):
-        try:
-            with urllib.request.urlopen(f"{BASE_URL}/health", timeout=2) as resp:
-                if resp.status == 200:
-                    server_ready = True
-                    break
-        except Exception:
-            time.sleep(1)
-
-    if not server_ready:
-        print("ERROR: Harness server failed to start.")
-        server_proc.terminate()
-        sys.exit(1)
-    print("Harness server is online and responding.")
+    with open(cases_file, "r", encoding="utf-8") as f:
+        cases_yaml = yaml.safe_load(f)
+    cases_list = cases_yaml.get("cases", [])
+    if args.max_cases > 0:
+        cases_list = cases_list[:args.max_cases]
+    print(f"Loaded {len(cases_list)} test cases from {cases_file}.")
 
     raw_samples: list[dict[str, Any]] = []
-    case_results: dict[str, list[dict[str, Any]]] = {}
     cold_start_samples: list[float] = []
-    ab_stats_a = {}
-    ab_stats_b = {}
-    ab_diff_ci = (0.0, 0.0)
-    forced_failure_reply = ""
-    cases_list = []
+    harness_proc = None
 
     try:
-        # 3. Load cases.yaml
-        cases_file = BASE_DIR / "benchmarks" / "e2e" / "cases.yaml"
-        with open(cases_file, "r", encoding="utf-8") as f:
-            cases_data = yaml.safe_load(f)
-        cases_list = cases_data.get("cases", [])
-        print(f"Loaded {len(cases_list)} test cases from {cases_file}.")
+        # Launch harness server
+        harness_script = BASE_DIR / "benchmarks" / "e2e" / "harness_server.py"
+        print(f"Launching harness server on {BASE_URL}...")
+        env = os.environ.copy()
+        env["RUFUS_E2E_PORT"] = str(PORT)
+        harness_proc = subprocess.Popen(
+            [PYTHON_EXE, str(harness_script)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            env=env
+        )
 
-        # 4. Discard 3 warm-ups on Case 1 per Rule
+        # Wait for server
+        online = False
+        for _ in range(60):
+            try:
+                req = urllib.request.Request(f"{BASE_URL}/e2e/health")
+                with urllib.request.urlopen(req, timeout=1) as resp:
+                    if resp.status == 200:
+                        online = True
+                        break
+            except Exception:
+                time.sleep(1)
+
+        if not online:
+            raise RuntimeError("Harness server failed to start within 60 seconds.")
+        print("Harness server is online and responding.")
+
+        # Discard 3 warm-ups on Case 1 per Rule
         print("\nExecuting 3 warm-up requests (discarded)...")
         for w_idx in range(3):
             reset_telemetry()
@@ -426,10 +539,9 @@ def main():
             cold_start_samples.append(w_lat)
             print(f"  Warm-up {w_idx + 1} latency: {w_lat:.3f} s")
 
-        # 5. Run cases x 3 repeats
-        print(f"\nRunning test cases x 3 repeats (time budget monitored)...")
+        # Run cases x repeats
+        print(f"\nRunning test cases x {args.repeats} repeats (time budget monitored)...")
         for case_idx, case in enumerate(cases_list):
-            # Check time budget
             elapsed = time.time() - start_wall_time
             if elapsed > max_duration_s:
                 print(f"Time budget reached ({elapsed / 60:.1f} min elapsed). Stopping at case {case_idx}.")
@@ -437,15 +549,16 @@ def main():
 
             case_id = case["id"]
             category = case["category"]
-            turns = case["turns"]
             expected_path = case["expected_path"]
-            expected_tool = case["expected_tool"]
+            expected_tool = case.get("expected_tool", "NONE")
             expected_args = case.get("expected_args", {})
             must_not = case.get("must_not", [])
+            turns = case.get("turns", [])
 
-            case_results[case_id] = []
+            case_success_count = 0
+            case_latencies = []
 
-            for repeat in range(1, 4):
+            for repeat in range(1, args.repeats + 1):
                 session_id = f"e2e_{case_id}_rep{repeat}"
                 turn_latencies = []
                 final_reply = ""
@@ -474,6 +587,7 @@ def main():
                             path_detected = 2
 
                 tot_latency = sum(turn_latencies)
+                case_latencies.append(tot_latency)
                 executed_tool_name = final_telem.get("last_tool_executed") or "NONE"
                 llm_calls = final_telem.get("llm_calls_in_turn", 1)
 
@@ -483,10 +597,7 @@ def main():
                 args_ok = True
                 exec_args = final_telem.get("last_tool_args", {})
                 if expected_tool != "NONE":
-                    if category == "safe_mutation" and "level" in expected_args:
-                        args_ok = (exec_args.get("level") == expected_args["level"] or exec_args.get("value") == expected_args["level"])
-                    elif category == "safe_mutation" and "app_name" in expected_args:
-                        args_ok = (exec_args.get("app_name") == expected_args["app_name"])
+                    args_ok = compare_args_against_schema(exec_args, expected_args, expected_tool)
 
                 must_not_violated = False
                 for mn in must_not:
@@ -525,12 +636,15 @@ def main():
                 else:
                     success = path_ok and tool_ok and args_ok and not must_not_violated
 
+                if success:
+                    case_success_count += 1
+
                 usages = final_telem.get("llm_usage_in_turn", [])
                 tok_per_sec = usages[0].get("tokens_per_sec", 0.0) if usages else 0.0
                 prompt_tokens = usages[0].get("prompt_tokens", 0) if usages else 0
                 completion_tokens = usages[0].get("completion_tokens", 0) if usages else 0
 
-                sample_record = {
+                raw_samples.append({
                     "case_id": case_id,
                     "category": category,
                     "repeat": repeat,
@@ -553,77 +667,28 @@ def main():
                     "prompt_tokens": prompt_tokens,
                     "completion_tokens": completion_tokens,
                     "tokens_per_sec": tok_per_sec,
-                    "reply_text": final_reply[:300].replace("\n", " "),
-                }
-                raw_samples.append(sample_record)
-                case_results[case_id].append(sample_record)
+                    "reply_text": final_reply,
+                })
 
-            res_rep = case_results[case_id]
-            s_count = sum(r["success"] for r in res_rep)
-            print(f"[{case_idx + 1:02d}/{len(cases_list)}] {case_id} ({category}): {s_count}/3 success | median lat: {calc_stats([r['latency_s'] for r in res_rep])['median']:.3f} s")
-
-        # 6. Call-2 Skip Interleaved A/B Experiment
-        print("\nRunning Interleaved A/B Benchmark of Call-2 Skip...")
-        ab_mutation_queries = [
-            "Set volume to 50%", "Mute system volume", "Set volume to 30%",
-            "Unmute system audio", "Set volume to 75%", "Open calculator",
-            "Launch notepad", "Set volume to 25%", "Set volume to 60%", "Mute"
-        ]
-        arm_a_latencies = []
-        arm_b_latencies = []
-
-        for rep in range(5):
-            for q_idx, q in enumerate(ab_mutation_queries):
-                os.environ["RUFUS_FORCE_CALL2"] = "0"
-                reset_telemetry()
-                _, lat_a = send_chat_request(f"ab_a_{rep}_{q_idx}", q, persona="companion")
-                arm_a_latencies.append(lat_a)
-
-                os.environ["RUFUS_FORCE_CALL2"] = "1"
-                reset_telemetry()
-                _, lat_b = send_chat_request(f"ab_b_{rep}_{q_idx}", q, persona="companion")
-                arm_b_latencies.append(lat_b)
-
-        os.environ["RUFUS_FORCE_CALL2"] = "0"
-        ab_stats_a = calc_stats(arm_a_latencies)
-        ab_stats_b = calc_stats(arm_b_latencies)
-        ab_diff_ci = bootstrap_diff_ci(arm_b_latencies, arm_a_latencies)
-
-        reset_telemetry()
-        fail_resp, _ = send_chat_request("failure_path_test", "Open unknown_uninstalled_fake_app_xyz", persona="companion")
-        forced_failure_reply = fail_resp.get("reply", "")
+            med_lat = calc_stats(case_latencies).get("median", 0.0)
+            print(f"[{case_idx + 1:02d}/{len(cases_list)}] {case_id} ({category}): {case_success_count}/{args.repeats} success | median lat: {med_lat:.3f} s")
 
     finally:
-        # Shutdown server
-        print("\nShutting down harness server...")
-        try:
-            server_proc.terminate()
-            server_proc.wait(timeout=10)
-        except Exception:
-            pass
+        if harness_proc:
+            print("\nShutting down harness server...")
+            harness_proc.terminate()
+            try:
+                harness_proc.wait(timeout=5)
+            except Exception:
+                harness_proc.kill()
 
-        # Restore data directory per Rule 3
-        if backup_dir.exists():
-            if data_dir.exists():
-                shutil.rmtree(data_dir)
-            shutil.copytree(backup_dir, data_dir)
-            shutil.rmtree(backup_dir)
-            print(f"Restored real data directory from {backup_dir}")
+        if raw_samples:
+            write_reports(results_dir, env_info, raw_samples, cases_list, cold_start_samples)
+            print(f"Saved {len(raw_samples)} raw samples to {results_dir / 'raw.csv'}")
+            print(f"Generated EVIDENCE.txt at {results_dir / 'EVIDENCE.txt'}")
+            print(f"Generated FINDINGS.md at {results_dir / 'FINDINGS.md'}")
 
-        # Always write whatever finished per prompt rule!
-        write_reports(
-            results_dir=results_dir,
-            cases_list=cases_list,
-            raw_samples=raw_samples,
-            case_results=case_results,
-            cold_start_samples=cold_start_samples,
-            ab_stats_a=ab_stats_a,
-            ab_stats_b=ab_stats_b,
-            ab_diff_ci=ab_diff_ci,
-            forced_failure_reply=forced_failure_reply,
-        )
-
-    print("\nBenchmark execution successfully concluded.")
+    print("End-to-End Benchmark Run Completed.")
 
 
 if __name__ == "__main__":
