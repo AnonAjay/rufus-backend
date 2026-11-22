@@ -1,0 +1,11 @@
+run,is_cold_start,import_latency_s
+1,True,0.613238
+2,True,0.643404
+3,True,0.725879
+4,False,0.673177
+5,False,0.601106
+6,False,0.636892
+7,False,0.607002
+8,False,0.591677
+9,False,0.605457
+10,False,0.581466

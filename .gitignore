@@ -17,6 +17,12 @@ env/
 *.log
 *.sqlite
 *.db
+contacts.json
+whatsapp.db
+rufus_memory.db
+rufus_data_backup*/
+data_e2e_backup*/
+data_temp*/
 
 piper_voices/
 *.onnx

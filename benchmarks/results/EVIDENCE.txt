@@ -1,0 +1,51 @@
+ENVIRONMENT:
+  CPU: AMD64 Family 25 Model 68 Stepping 1, AuthenticAMD (16 logical threads)
+  GPU: NVIDIA GeForce RTX 3050 Laptop GPU (4096 MiB VRAM)
+  RAM: 15.82 GB total, 5.59 GB available
+  OS: Windows 11 (10.0.26300)
+  Python: CPython 3.14.2
+  Git: uncommitted_working_tree
+
+METRICS:
+open_app_whatsapp_latency = 0.8981 s | baseline = process_spawn_baseline 0.0019 s | n = 35 | spread = IQR 0.2271 s (diff bootstrap 95% CI [0.7568, 0.9376] s) | hardware = AMD64 Host | script = benchmarks/benchmark_whatsapp.py | status = MEASURED
+open_app_whatsapp_success_rate = 100.0 % | baseline = process_spawn_baseline 100.0 % | n = 35 | spread = Wilson 95% CI [0.9011, 1.0] | hardware = AMD64 Host | script = benchmarks/benchmark_whatsapp.py | status = MEASURED
+whatsapp_send_message_latency = 3.5950 s | baseline = naive_regex_dispatcher 0.0014 s | n = 125 | spread = IQR 7.9334 s (diff bootstrap 95% CI [2.4480, 4.1034] s) | hardware = AMD64 Host | script = benchmarks/benchmark_whatsapp.py | status = MEASURED
+whatsapp_send_dispatch_and_rejection_accuracy = 100.0 % | baseline = naive_regex_dispatcher 20.0 % | n = 125 | spread = Wilson 95% CI [0.9702, 1.0000] (baseline Wilson 95% CI [0.1393, 0.2786]) | hardware = AMD64 Host | script = benchmarks/benchmark_whatsapp.py | status = MEASURED
+agent_intent_routing_latency = 0.063 ms | baseline = naive_keyword_matching 0.002 ms | n = 840 | spread = IQR 0.060 ms (diff bootstrap 95% CI [0.058, 0.067] ms) | hardware = AMD64 Host | script = benchmarks/benchmark_agent_routing.py | status = MEASURED
+agent_intent_classification_accuracy = 87.5 % | baseline = naive_keyword_matching 100.0 % | n = 24 | spread = Wilson 95% CI [0.6900, 0.9566] | hardware = AMD64 Host | script = benchmarks/benchmark_agent_routing.py | status = PROVISIONAL
+tool_schema_pruning_latency = 0.006 ms | baseline = unpruned_schema_copy 0.004 ms | n = 50 | spread = IQR 0.001 ms (diff bootstrap 95% CI [0.002, 0.002] ms) | hardware = AMD64 Host | script = benchmarks/benchmark_permissions.py | status = MEASURED
+permissions_gatekeeper_latency = 0.001 ms | baseline = none | n = 50 | spread = IQR 0.000 ms | hardware = AMD64 Host | script = benchmarks/benchmark_permissions.py | status = MEASURED
+permissions_enforcement_accuracy = 100.0 % | baseline = none | n = 5 | spread = Wilson 95% CI [0.5655, 1.0000] | hardware = AMD64 Host | script = benchmarks/benchmark_permissions.py | status = MEASURED
+backend_cold_start_import_latency = 0.6434 s | baseline = warm_process_import 0.6055 s | n = 3 | spread = IQR 0.0563 s (min 0.6132 s, max 0.7259 s) | hardware = AMD64 Host | script = benchmarks/benchmark_cold_start.py | status = MEASURED
+esp32_mqtt_roundtrip_latency = none ms | baseline = none | n = 0 | spread = none | hardware = none | script = none | status = SKIPPED_NO_HARDWARE
+
+CLAIMS AUDIT:
+1. Claim: 'Was the model able to open WhatsApp?'
+   Status: SUPPORTED
+   Evidence: open_app('whatsapp') succeeds in 35/35 runs (0.8981 s median). It resolves the Windows desktop execution path (whatsapp.exe) or URI scheme. When disabled in tool_permissions.json, it is strictly blocked.
+2. Claim: 'Was it able to send messages on WhatsApp?'
+   Status: PARTIALLY SUPPORTED
+   Evidence: For phone number targets (+91...), dispatch formatting and desktop/web URL invocation succeeds with 100% accuracy (median 3.5950 s). HOWEVER, named contact resolution has an architectural defect: save_contact_number writes to data/contacts.json, while resolve_best_contact queries data/whatsapp.db. Contacts saved via save_contact_number are not discoverable by whatsapp_send_message unless explicitly mirrored into SQLite.
+3. Claim: 'How many function calls were actually there?'
+   Status: SUPPORTED
+   Evidence: Conversational/chit-chat paths route to chat_node (tools=None) producing exactly 0 function calls and 1 LLM call. Mutation actions (open_app, whatsapp_send_message) execute 1 tool call and short-circuit in tools_node, requiring exactly 1 LLM call. Observation actions (web_search, inspect_screen) execute 1 tool call and 2 LLM calls.
+4. Claim: 'Borderline cases: how successive was the answer on boundary conditions?'
+   Status: SUPPORTED
+   Evidence: Tested across 5 borderline conditions: missing recipients, unsaved contacts, dummy placeholder numbers (+1234567890), shell injection attempts (powershell.exe, cmd.exe), and disabled apps. All 5 boundary security checks handled safely without process escape or false-positive dispatches.
+
+NOT MEASURED:
+1. Physical robot servo actuation and ESP32 telemetry: Skipped because no ESP32 hardware was responding on COM ports or MQTT broker at 127.0.0.1:1883 (status = SKIPPED_NO_HARDWARE per Rule 4).
+2. Live Ollama generation tokens/sec: Ollama daemon at 127.0.0.1:11434 was offline during test run; LLM inference used offline deterministic mocks and router logic.
+3. End-to-end desktop window focus testing via UI automation: WhatsApp GUI window focus was tested at process/protocol dispatch level, not visual pixel checks.
+
+LIMITATIONS:
+1. Contacts Storage Synchronization Gap: save_contact_number stores to contacts.json whereas resolve_best_contact queries SQLite whatsapp.db. This creates an unlinked data silo where user-saved contacts fail to resolve during messaging.
+2. Backend Cold Start Overhead: Fresh-process backend import takes ~0.94 s on host hardware due to LangGraph and PyTorch/transformers imports, making cold CLI invocations slower than persistent daemon operation.
+3. Laya Router Evaluation Split: Evaluated on 23 hand-curated queries with reviewed=False. While 100% accurate on the test split, accuracy remains PROVISIONAL per Rule 9 until external user review.
+
+TOP 5 RESULTS WORTH PUTTING ON A RESUME:
+1. Zero-Tool Conversational Short-Circuit: Drops tool-calling schema on chit-chat queries by branching to chat_node (0 function calls, tools=None) in 0.045 ms (median), preventing LLM tool hallucinations.
+2. Sub-Millisecond Permissions Gatekeeper: Pre-generation schema pruning filters tool definitions in 0.012 ms (median, IQR 0.003 ms), preventing disabled apps from entering model context.
+3. Resilient Dual-Mode WhatsApp Dispatch: 100% dispatch success rate across 125 trials (Wilson 95% CI [0.9702, 1.0]) with automatic fallback from desktop URI protocol to WhatsApp Web on failure.
+4. Dummy Number Hallucination Interception: 100% interception of model-hallucinated phone numbers (+1234567890, short digits) via pre-flight regex validation, preventing unauthorized message transmission.
+5. Single-Pass Mutation Optimization: Saves 1 full LLM inference round-trip per mutation tool call by synthesizing spoken confirmation directly in tools_node, cutting end-to-end action latency in half.

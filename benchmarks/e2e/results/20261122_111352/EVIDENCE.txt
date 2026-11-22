@@ -1,0 +1,32 @@
+ENVIRONMENT:
+  CPU: AMD64 Family 25 Model 68 Stepping 1, AuthenticAMD (16 logical threads)
+  GPU/VRAM: NVIDIA GeForce RTX 3050 Laptop GPU (4096 MiB VRAM, 3.2 GiB available)
+  RAM: 15.82 GB total, 3.53 GB available
+  OS: Windows 11 (10.0.26300)
+  Python: CPython 3.11.10 (miniconda3 rufus env)
+  Ollama version: 0.32.15
+  Model and quantization: llama3.2:latest (2.0 GB, Q4_K_M equivalent GGUF)
+  Router model: convaiinnovations/laya (ModernBERT-large decision model)
+  Git commit: 42d4a9ddf022f8df7ea8b015d2c09709fc66b5d5
+  Git status --porcelain: M data/contacts.json
+  Date: 2026-11-22T11:24:03.357069
+
+METRICS:
+false_action_rate_on_traps_and_none = 33.33 % | baseline = zero_tolerance 0.0 % | n = 9 distinct queries (27 repeats) | spread = Wilson 95% CI [0.1206, 0.6458] | hardware = NVIDIA RTX 3050 Laptop GPU | script = benchmarks/e2e/runner.py | status = MEASURED
+repeat_outcome_inconsistency_rate = 4.00 % | baseline = deterministic 0.0 % | n = 25 distinct queries (3 repeats each) | spread = Wilson 95% CI [0.0071, 0.1954] | hardware = NVIDIA RTX 3050 Laptop GPU | script = benchmarks/e2e/runner.py | status = MEASURED
+latency_path_1 = 12.1744 s | baseline = none | n = 13 runs | spread = IQR 38.0286 s (min 2.8158 s, max 45.0197 s) | hardware = NVIDIA RTX 3050 Laptop GPU | script = benchmarks/e2e/runner.py | status = MEASURED
+latency_path_2 = 3.1138 s | baseline = none | n = 50 runs | spread = IQR 1.6740 s (min 1.6574 s, max 28.2588 s) | hardware = NVIDIA RTX 3050 Laptop GPU | script = benchmarks/e2e/runner.py | status = MEASURED
+latency_path_5 = 4.5087 s | baseline = none | n = 9 runs | spread = IQR 7.1337 s (min 4.3956 s, max 15.0473 s) | hardware = NVIDIA RTX 3050 Laptop GPU | script = benchmarks/e2e/runner.py | status = MEASURED
+cold_start_first_inference_latency = 1.6363 s | baseline = warm_runs 12.1744 s | n = 3 | spread = IQR 13.9832 s (min 1.6231 s, max 29.5895 s) | hardware = NVIDIA RTX 3050 Laptop GPU | script = benchmarks/e2e/runner.py | status = MEASURED
+ollama_generation_throughput = 21.90 tokens/s | baseline = none | n = 68 samples | spread = IQR 5.67 tokens/s | hardware = NVIDIA RTX 3050 Laptop GPU | script = benchmarks/e2e/runner.py | status = MEASURED
+esp32_mqtt_hardware_latency = none ms | baseline = none | n = 0 | spread = none | hardware = none | script = none | status = SKIPPED_NO_HARDWARE
+
+NOT MEASURED:
+1. ESP32 physical robot motor control and telemetry: Skipped because physical robot was offline (status = SKIPPED_NO_HARDWARE per Rule 4).
+2. Real WhatsApp message dispatch across telecommunication networks: Real sending was stubbed with a safety recorder to prevent external message delivery.
+3. Real Spotify cloud API controls: Real media playback was stubbed with a safety recorder to prevent desktop media disruption.
+
+LIMITATIONS:
+1. Laya Greeting Sensitivity: The ModernBERT decision model classifies casual greetings ('Hi Rufus!') as action with low-moderate confidence (~0.54), triggering tool deliberation.
+2. Local Model Sequential Processing: Ollama queues sequential LLM calls when background memory extraction tasks run concurrently.
+3. AST Parsing Validation Scope: Coder evaluation verifies syntactic validity via ast.parse() but does not execute arbitrary model code in a secure sandbox.

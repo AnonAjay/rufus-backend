@@ -1,0 +1,251 @@
+iteration,recipient,message_len,system,latency_ms,output,success
+1,+919876543210,29,rufus_whatsapp_mcp,2.5253000003431225,Message sent to +919876543210 (+919876543210): 'Arrived safely at the station'.,1
+1,+919876543210,29,naive_baseline,0.000999999429041054,Dispatched: whatsapp://send?phone=919876543210&text=Arrived safely at the station,1
+1,Mom,29,rufus_whatsapp_mcp,12.671199999203964,Message sent to Mom (+919876543210): 'Please call me back when free'.,1
+1,Mom,29,naive_baseline,0.0015999994502635673,Dispatched: whatsapp://send?phone=Mom&text=Please call me back when free,0
+1,UnknownPersonX,21,rufus_whatsapp_mcp,6.523600000036822,"I don't have a phone number for 'Unknownpersonx' in my address book. Please tell me: 'Save Unknownpersonx's number as +91...' (with their phone number), and I will save it and send your message immediately.",1
+1,UnknownPersonX,21,naive_baseline,0.00199999976757681,Dispatched: whatsapp://send?phone=UnknownPersonX&text=Can we meet tomorrow?,0
+1,+1234567890,12,rufus_whatsapp_mcp,0.016400000276917126,Please specify a recipient name or phone number.,1
+1,+1234567890,12,naive_baseline,0.0012000000424450263,Dispatched: whatsapp://send?phone=1234567890&text=Test message,0
+1,+919876543210,0,rufus_whatsapp_mcp,0.0012000000424450263,Message content cannot be empty.,1
+1,+919876543210,0,naive_baseline,0.001100000190490391,Dispatched: whatsapp://send?phone=919876543210&text=,0
+2,+919876543210,29,rufus_whatsapp_mcp,2.4493999999322114,Message sent to +919876543210 (+919876543210): 'Arrived safely at the station'.,1
+2,+919876543210,29,naive_baseline,0.000999999429041054,Dispatched: whatsapp://send?phone=919876543210&text=Arrived safely at the station,1
+2,Mom,29,rufus_whatsapp_mcp,9.867099999610218,Message sent to Mom (+919876543210): 'Please call me back when free'.,1
+2,Mom,29,naive_baseline,0.0018999999156221747,Dispatched: whatsapp://send?phone=Mom&text=Please call me back when free,0
+2,UnknownPersonX,21,rufus_whatsapp_mcp,6.5628000002107,"I don't have a phone number for 'Unknownpersonx' in my address book. Please tell me: 'Save Unknownpersonx's number as +91...' (with their phone number), and I will save it and send your message immediately.",1
+2,UnknownPersonX,21,naive_baseline,0.0018000000636675395,Dispatched: whatsapp://send?phone=UnknownPersonX&text=Can we meet tomorrow?,0
+2,+1234567890,12,rufus_whatsapp_mcp,0.013700000636163168,Please specify a recipient name or phone number.,1
+2,+1234567890,12,naive_baseline,0.0012999998943996616,Dispatched: whatsapp://send?phone=1234567890&text=Test message,0
+2,+919876543210,0,rufus_whatsapp_mcp,0.001100000190490391,Message content cannot be empty.,1
+2,+919876543210,0,naive_baseline,0.0006999998731771484,Dispatched: whatsapp://send?phone=919876543210&text=,0
+3,+919876543210,29,rufus_whatsapp_mcp,2.5408000001334585,Message sent to +919876543210 (+919876543210): 'Arrived safely at the station'.,1
+3,+919876543210,29,naive_baseline,0.0008999995770864189,Dispatched: whatsapp://send?phone=919876543210&text=Arrived safely at the station,1
+3,Mom,29,rufus_whatsapp_mcp,9.952099999281927,Message sent to Mom (+919876543210): 'Please call me back when free'.,1
+3,Mom,29,naive_baseline,0.0012000000424450263,Dispatched: whatsapp://send?phone=Mom&text=Please call me back when free,0
+3,UnknownPersonX,21,rufus_whatsapp_mcp,8.158900000125868,"I don't have a phone number for 'Unknownpersonx' in my address book. Please tell me: 'Save Unknownpersonx's number as +91...' (with their phone number), and I will save it and send your message immediately.",1
+3,UnknownPersonX,21,naive_baseline,0.0024000000848900527,Dispatched: whatsapp://send?phone=UnknownPersonX&text=Can we meet tomorrow?,0
+3,+1234567890,12,rufus_whatsapp_mcp,0.018899999304267112,Please specify a recipient name or phone number.,1
+3,+1234567890,12,naive_baseline,0.0015999994502635673,Dispatched: whatsapp://send?phone=1234567890&text=Test message,0
+3,+919876543210,0,rufus_whatsapp_mcp,0.001499999598308932,Message content cannot be empty.,1
+3,+919876543210,0,naive_baseline,0.0010000003385357559,Dispatched: whatsapp://send?phone=919876543210&text=,0
+4,+919876543210,29,rufus_whatsapp_mcp,4.139900000154739,Message sent to +919876543210 (+919876543210): 'Arrived safely at the station'.,1
+4,+919876543210,29,naive_baseline,0.001499999598308932,Dispatched: whatsapp://send?phone=919876543210&text=Arrived safely at the station,1
+4,Mom,29,rufus_whatsapp_mcp,10.456199999680393,Message sent to Mom (+919876543210): 'Please call me back when free'.,1
+4,Mom,29,naive_baseline,0.001600000359758269,Dispatched: whatsapp://send?phone=Mom&text=Please call me back when free,0
+4,UnknownPersonX,21,rufus_whatsapp_mcp,6.648600000517035,"I don't have a phone number for 'Unknownpersonx' in my address book. Please tell me: 'Save Unknownpersonx's number as +91...' (with their phone number), and I will save it and send your message immediately.",1
+4,UnknownPersonX,21,naive_baseline,0.002099999619531445,Dispatched: whatsapp://send?phone=UnknownPersonX&text=Can we meet tomorrow?,0
+4,+1234567890,12,rufus_whatsapp_mcp,0.01539999993838137,Please specify a recipient name or phone number.,1
+4,+1234567890,12,naive_baseline,0.0017000002117129043,Dispatched: whatsapp://send?phone=1234567890&text=Test message,0
+4,+919876543210,0,rufus_whatsapp_mcp,0.0012999998943996616,Message content cannot be empty.,1
+4,+919876543210,0,naive_baseline,0.0007999997251317836,Dispatched: whatsapp://send?phone=919876543210&text=,0
+5,+919876543210,29,rufus_whatsapp_mcp,3.627099999903294,Message sent to +919876543210 (+919876543210): 'Arrived safely at the station'.,1
+5,+919876543210,29,naive_baseline,0.0010000003385357559,Dispatched: whatsapp://send?phone=919876543210&text=Arrived safely at the station,1
+5,Mom,29,rufus_whatsapp_mcp,9.390900000653346,Message sent to Mom (+919876543210): 'Please call me back when free'.,1
+5,Mom,29,naive_baseline,0.0012000000424450263,Dispatched: whatsapp://send?phone=Mom&text=Please call me back when free,0
+5,UnknownPersonX,21,rufus_whatsapp_mcp,6.473000000369211,"I don't have a phone number for 'Unknownpersonx' in my address book. Please tell me: 'Save Unknownpersonx's number as +91...' (with their phone number), and I will save it and send your message immediately.",1
+5,UnknownPersonX,21,naive_baseline,0.0018999999156221747,Dispatched: whatsapp://send?phone=UnknownPersonX&text=Can we meet tomorrow?,0
+5,+1234567890,12,rufus_whatsapp_mcp,0.014000000192027073,Please specify a recipient name or phone number.,1
+5,+1234567890,12,naive_baseline,0.0012000000424450263,Dispatched: whatsapp://send?phone=1234567890&text=Test message,0
+5,+919876543210,0,rufus_whatsapp_mcp,0.019299999621580355,Message content cannot be empty.,1
+5,+919876543210,0,naive_baseline,0.0013000008038943633,Dispatched: whatsapp://send?phone=919876543210&text=,0
+6,+919876543210,29,rufus_whatsapp_mcp,2.4624999996376573,Message sent to +919876543210 (+919876543210): 'Arrived safely at the station'.,1
+6,+919876543210,29,naive_baseline,0.0010000003385357559,Dispatched: whatsapp://send?phone=919876543210&text=Arrived safely at the station,1
+6,Mom,29,rufus_whatsapp_mcp,10.083699999995588,Message sent to Mom (+919876543210): 'Please call me back when free'.,1
+6,Mom,29,naive_baseline,0.001499999598308932,Dispatched: whatsapp://send?phone=Mom&text=Please call me back when free,0
+6,UnknownPersonX,21,rufus_whatsapp_mcp,9.269099999983155,"I don't have a phone number for 'Unknownpersonx' in my address book. Please tell me: 'Save Unknownpersonx's number as +91...' (with their phone number), and I will save it and send your message immediately.",1
+6,UnknownPersonX,21,naive_baseline,0.0023000002329354174,Dispatched: whatsapp://send?phone=UnknownPersonX&text=Can we meet tomorrow?,0
+6,+1234567890,12,rufus_whatsapp_mcp,0.02249999943160219,Please specify a recipient name or phone number.,1
+6,+1234567890,12,naive_baseline,0.0019000008251168765,Dispatched: whatsapp://send?phone=1234567890&text=Test message,0
+6,+919876543210,0,rufus_whatsapp_mcp,0.0018000000636675395,Message content cannot be empty.,1
+6,+919876543210,0,naive_baseline,0.0012000000424450263,Dispatched: whatsapp://send?phone=919876543210&text=,0
+7,+919876543210,29,rufus_whatsapp_mcp,3.747499999917636,Message sent to +919876543210 (+919876543210): 'Arrived safely at the station'.,1
+7,+919876543210,29,naive_baseline,0.0010000003385357559,Dispatched: whatsapp://send?phone=919876543210&text=Arrived safely at the station,1
+7,Mom,29,rufus_whatsapp_mcp,9.4504999997298,Message sent to Mom (+919876543210): 'Please call me back when free'.,1
+7,Mom,29,naive_baseline,0.001499999598308932,Dispatched: whatsapp://send?phone=Mom&text=Please call me back when free,0
+7,UnknownPersonX,21,rufus_whatsapp_mcp,7.915999999568157,"I don't have a phone number for 'Unknownpersonx' in my address book. Please tell me: 'Save Unknownpersonx's number as +91...' (with their phone number), and I will save it and send your message immediately.",1
+7,UnknownPersonX,21,naive_baseline,0.003000000106112566,Dispatched: whatsapp://send?phone=UnknownPersonX&text=Can we meet tomorrow?,0
+7,+1234567890,12,rufus_whatsapp_mcp,0.019500000234984327,Please specify a recipient name or phone number.,1
+7,+1234567890,12,naive_baseline,0.001600000359758269,Dispatched: whatsapp://send?phone=1234567890&text=Test message,0
+7,+919876543210,0,rufus_whatsapp_mcp,0.0013999997463542968,Message content cannot be empty.,1
+7,+919876543210,0,naive_baseline,0.0012999998943996616,Dispatched: whatsapp://send?phone=919876543210&text=,0
+8,+919876543210,29,rufus_whatsapp_mcp,3.882799999701092,Message sent to +919876543210 (+919876543210): 'Arrived safely at the station'.,1
+8,+919876543210,29,naive_baseline,0.0012999998943996616,Dispatched: whatsapp://send?phone=919876543210&text=Arrived safely at the station,1
+8,Mom,29,rufus_whatsapp_mcp,12.423600000147417,Message sent to Mom (+919876543210): 'Please call me back when free'.,1
+8,Mom,29,naive_baseline,0.0015000005078036338,Dispatched: whatsapp://send?phone=Mom&text=Please call me back when free,0
+8,UnknownPersonX,21,rufus_whatsapp_mcp,6.4286999995601946,"I don't have a phone number for 'Unknownpersonx' in my address book. Please tell me: 'Save Unknownpersonx's number as +91...' (with their phone number), and I will save it and send your message immediately.",1
+8,UnknownPersonX,21,naive_baseline,0.00199999976757681,Dispatched: whatsapp://send?phone=UnknownPersonX&text=Can we meet tomorrow?,0
+8,+1234567890,12,rufus_whatsapp_mcp,0.01340000017080456,Please specify a recipient name or phone number.,1
+8,+1234567890,12,naive_baseline,0.0012000000424450263,Dispatched: whatsapp://send?phone=1234567890&text=Test message,0
+8,+919876543210,0,rufus_whatsapp_mcp,0.0012000000424450263,Message content cannot be empty.,1
+8,+919876543210,0,naive_baseline,0.0007999997251317836,Dispatched: whatsapp://send?phone=919876543210&text=,0
+9,+919876543210,29,rufus_whatsapp_mcp,2.528899999560963,Message sent to +919876543210 (+919876543210): 'Arrived safely at the station'.,1
+9,+919876543210,29,naive_baseline,0.0009000004865811206,Dispatched: whatsapp://send?phone=919876543210&text=Arrived safely at the station,1
+9,Mom,29,rufus_whatsapp_mcp,10.525300000153948,Message sent to Mom (+919876543210): 'Please call me back when free'.,1
+9,Mom,29,naive_baseline,0.0018000000636675395,Dispatched: whatsapp://send?phone=Mom&text=Please call me back when free,0
+9,UnknownPersonX,21,rufus_whatsapp_mcp,7.070300000123098,"I don't have a phone number for 'Unknownpersonx' in my address book. Please tell me: 'Save Unknownpersonx's number as +91...' (with their phone number), and I will save it and send your message immediately.",1
+9,UnknownPersonX,21,naive_baseline,0.003099999958067201,Dispatched: whatsapp://send?phone=UnknownPersonX&text=Can we meet tomorrow?,0
+9,+1234567890,12,rufus_whatsapp_mcp,0.018900000213761814,Please specify a recipient name or phone number.,1
+9,+1234567890,12,naive_baseline,0.001499999598308932,Dispatched: whatsapp://send?phone=1234567890&text=Test message,0
+9,+919876543210,0,rufus_whatsapp_mcp,0.0012999998943996616,Message content cannot be empty.,1
+9,+919876543210,0,naive_baseline,0.0012000000424450263,Dispatched: whatsapp://send?phone=919876543210&text=,0
+10,+919876543210,29,rufus_whatsapp_mcp,2.3584000000482774,Message sent to +919876543210 (+919876543210): 'Arrived safely at the station'.,1
+10,+919876543210,29,naive_baseline,0.000999999429041054,Dispatched: whatsapp://send?phone=919876543210&text=Arrived safely at the station,1
+10,Mom,29,rufus_whatsapp_mcp,9.375800000270829,Message sent to Mom (+919876543210): 'Please call me back when free'.,1
+10,Mom,29,naive_baseline,0.0013999997463542968,Dispatched: whatsapp://send?phone=Mom&text=Please call me back when free,0
+10,UnknownPersonX,21,rufus_whatsapp_mcp,7.895699999608041,"I don't have a phone number for 'Unknownpersonx' in my address book. Please tell me: 'Save Unknownpersonx's number as +91...' (with their phone number), and I will save it and send your message immediately.",1
+10,UnknownPersonX,21,naive_baseline,0.002499999936844688,Dispatched: whatsapp://send?phone=UnknownPersonX&text=Can we meet tomorrow?,0
+10,+1234567890,12,rufus_whatsapp_mcp,0.020399999812070746,Please specify a recipient name or phone number.,1
+10,+1234567890,12,naive_baseline,0.0018999999156221747,Dispatched: whatsapp://send?phone=1234567890&text=Test message,0
+10,+919876543210,0,rufus_whatsapp_mcp,0.001499999598308932,Message content cannot be empty.,1
+10,+919876543210,0,naive_baseline,0.001100000190490391,Dispatched: whatsapp://send?phone=919876543210&text=,0
+11,+919876543210,29,rufus_whatsapp_mcp,3.9719999995213584,Message sent to +919876543210 (+919876543210): 'Arrived safely at the station'.,1
+11,+919876543210,29,naive_baseline,0.0013999997463542968,Dispatched: whatsapp://send?phone=919876543210&text=Arrived safely at the station,1
+11,Mom,29,rufus_whatsapp_mcp,12.348799999926996,Message sent to Mom (+919876543210): 'Please call me back when free'.,1
+11,Mom,29,naive_baseline,0.0017000002117129043,Dispatched: whatsapp://send?phone=Mom&text=Please call me back when free,0
+11,UnknownPersonX,21,rufus_whatsapp_mcp,8.744699999624572,"I don't have a phone number for 'Unknownpersonx' in my address book. Please tell me: 'Save Unknownpersonx's number as +91...' (with their phone number), and I will save it and send your message immediately.",1
+11,UnknownPersonX,21,naive_baseline,0.0023000002329354174,Dispatched: whatsapp://send?phone=UnknownPersonX&text=Can we meet tomorrow?,0
+11,+1234567890,12,rufus_whatsapp_mcp,0.019100000827165786,Please specify a recipient name or phone number.,1
+11,+1234567890,12,naive_baseline,0.0017000002117129043,Dispatched: whatsapp://send?phone=1234567890&text=Test message,0
+11,+919876543210,0,rufus_whatsapp_mcp,0.0013999997463542968,Message content cannot be empty.,1
+11,+919876543210,0,naive_baseline,0.001100000190490391,Dispatched: whatsapp://send?phone=919876543210&text=,0
+12,+919876543210,29,rufus_whatsapp_mcp,4.104900000129419,Message sent to +919876543210 (+919876543210): 'Arrived safely at the station'.,1
+12,+919876543210,29,naive_baseline,0.0013999997463542968,Dispatched: whatsapp://send?phone=919876543210&text=Arrived safely at the station,1
+12,Mom,29,rufus_whatsapp_mcp,12.004000000160886,Message sent to Mom (+919876543210): 'Please call me back when free'.,1
+12,Mom,29,naive_baseline,0.0016999993022182025,Dispatched: whatsapp://send?phone=Mom&text=Please call me back when free,0
+12,UnknownPersonX,21,rufus_whatsapp_mcp,7.466300000487536,"I don't have a phone number for 'Unknownpersonx' in my address book. Please tell me: 'Save Unknownpersonx's number as +91...' (with their phone number), and I will save it and send your message immediately.",1
+12,UnknownPersonX,21,naive_baseline,0.003000000106112566,Dispatched: whatsapp://send?phone=UnknownPersonX&text=Can we meet tomorrow?,0
+12,+1234567890,12,rufus_whatsapp_mcp,0.022700000045006163,Please specify a recipient name or phone number.,1
+12,+1234567890,12,naive_baseline,0.0018999999156221747,Dispatched: whatsapp://send?phone=1234567890&text=Test message,0
+12,+919876543210,0,rufus_whatsapp_mcp,0.001499999598308932,Message content cannot be empty.,1
+12,+919876543210,0,naive_baseline,0.0013000008038943633,Dispatched: whatsapp://send?phone=919876543210&text=,0
+13,+919876543210,29,rufus_whatsapp_mcp,4.064499999913096,Message sent to +919876543210 (+919876543210): 'Arrived safely at the station'.,1
+13,+919876543210,29,naive_baseline,0.0013000008038943633,Dispatched: whatsapp://send?phone=919876543210&text=Arrived safely at the station,1
+13,Mom,29,rufus_whatsapp_mcp,11.373899999853165,Message sent to Mom (+919876543210): 'Please call me back when free'.,1
+13,Mom,29,naive_baseline,0.0015999994502635673,Dispatched: whatsapp://send?phone=Mom&text=Please call me back when free,0
+13,UnknownPersonX,21,rufus_whatsapp_mcp,6.02450000042154,"I don't have a phone number for 'Unknownpersonx' in my address book. Please tell me: 'Save Unknownpersonx's number as +91...' (with their phone number), and I will save it and send your message immediately.",1
+13,UnknownPersonX,21,naive_baseline,0.0017000002117129043,Dispatched: whatsapp://send?phone=UnknownPersonX&text=Can we meet tomorrow?,0
+13,+1234567890,12,rufus_whatsapp_mcp,0.013300000318849925,Please specify a recipient name or phone number.,1
+13,+1234567890,12,naive_baseline,0.001100000190490391,Dispatched: whatsapp://send?phone=1234567890&text=Test message,0
+13,+919876543210,0,rufus_whatsapp_mcp,0.000999999429041054,Message content cannot be empty.,1
+13,+919876543210,0,naive_baseline,0.000999999429041054,Dispatched: whatsapp://send?phone=919876543210&text=,0
+14,+919876543210,29,rufus_whatsapp_mcp,2.5064999999813153,Message sent to +919876543210 (+919876543210): 'Arrived safely at the station'.,1
+14,+919876543210,29,naive_baseline,0.000999999429041054,Dispatched: whatsapp://send?phone=919876543210&text=Arrived safely at the station,1
+14,Mom,29,rufus_whatsapp_mcp,10.266299999784678,Message sent to Mom (+919876543210): 'Please call me back when free'.,1
+14,Mom,29,naive_baseline,0.0013999997463542968,Dispatched: whatsapp://send?phone=Mom&text=Please call me back when free,0
+14,UnknownPersonX,21,rufus_whatsapp_mcp,8.81759999992937,"I don't have a phone number for 'Unknownpersonx' in my address book. Please tell me: 'Save Unknownpersonx's number as +91...' (with their phone number), and I will save it and send your message immediately.",1
+14,UnknownPersonX,21,naive_baseline,0.002599999788799323,Dispatched: whatsapp://send?phone=UnknownPersonX&text=Can we meet tomorrow?,0
+14,+1234567890,12,rufus_whatsapp_mcp,0.018900000213761814,Please specify a recipient name or phone number.,1
+14,+1234567890,12,naive_baseline,0.0017000002117129043,Dispatched: whatsapp://send?phone=1234567890&text=Test message,0
+14,+919876543210,0,rufus_whatsapp_mcp,0.0012999998943996616,Message content cannot be empty.,1
+14,+919876543210,0,naive_baseline,0.001100000190490391,Dispatched: whatsapp://send?phone=919876543210&text=,0
+15,+919876543210,29,rufus_whatsapp_mcp,3.9997000003495486,Message sent to +919876543210 (+919876543210): 'Arrived safely at the station'.,1
+15,+919876543210,29,naive_baseline,0.0014000006558489986,Dispatched: whatsapp://send?phone=919876543210&text=Arrived safely at the station,1
+15,Mom,29,rufus_whatsapp_mcp,12.964099999408063,Message sent to Mom (+919876543210): 'Please call me back when free'.,1
+15,Mom,29,naive_baseline,0.0012999998943996616,Dispatched: whatsapp://send?phone=Mom&text=Please call me back when free,0
+15,UnknownPersonX,21,rufus_whatsapp_mcp,5.934499999966647,"I don't have a phone number for 'Unknownpersonx' in my address book. Please tell me: 'Save Unknownpersonx's number as +91...' (with their phone number), and I will save it and send your message immediately.",1
+15,UnknownPersonX,21,naive_baseline,0.004200000148557592,Dispatched: whatsapp://send?phone=UnknownPersonX&text=Can we meet tomorrow?,0
+15,+1234567890,12,rufus_whatsapp_mcp,0.013199999557400588,Please specify a recipient name or phone number.,1
+15,+1234567890,12,naive_baseline,0.0010000003385357559,Dispatched: whatsapp://send?phone=1234567890&text=Test message,0
+15,+919876543210,0,rufus_whatsapp_mcp,0.001100000190490391,Message content cannot be empty.,1
+15,+919876543210,0,naive_baseline,0.0007999997251317836,Dispatched: whatsapp://send?phone=919876543210&text=,0
+16,+919876543210,29,rufus_whatsapp_mcp,3.715099999681115,Message sent to +919876543210 (+919876543210): 'Arrived safely at the station'.,1
+16,+919876543210,29,naive_baseline,0.0012999998943996616,Dispatched: whatsapp://send?phone=919876543210&text=Arrived safely at the station,1
+16,Mom,29,rufus_whatsapp_mcp,14.12239999990561,Message sent to Mom (+919876543210): 'Please call me back when free'.,1
+16,Mom,29,naive_baseline,0.001600000359758269,Dispatched: whatsapp://send?phone=Mom&text=Please call me back when free,0
+16,UnknownPersonX,21,rufus_whatsapp_mcp,7.723799999439507,"I don't have a phone number for 'Unknownpersonx' in my address book. Please tell me: 'Save Unknownpersonx's number as +91...' (with their phone number), and I will save it and send your message immediately.",1
+16,UnknownPersonX,21,naive_baseline,0.0023000002329354174,Dispatched: whatsapp://send?phone=UnknownPersonX&text=Can we meet tomorrow?,0
+16,+1234567890,12,rufus_whatsapp_mcp,0.01539999993838137,Please specify a recipient name or phone number.,1
+16,+1234567890,12,naive_baseline,0.0013999997463542968,Dispatched: whatsapp://send?phone=1234567890&text=Test message,0
+16,+919876543210,0,rufus_whatsapp_mcp,0.001100000190490391,Message content cannot be empty.,1
+16,+919876543210,0,naive_baseline,0.0007999997251317836,Dispatched: whatsapp://send?phone=919876543210&text=,0
+17,+919876543210,29,rufus_whatsapp_mcp,3.1626999998479732,Message sent to +919876543210 (+919876543210): 'Arrived safely at the station'.,1
+17,+919876543210,29,naive_baseline,0.000999999429041054,Dispatched: whatsapp://send?phone=919876543210&text=Arrived safely at the station,1
+17,Mom,29,rufus_whatsapp_mcp,10.613899999952991,Message sent to Mom (+919876543210): 'Please call me back when free'.,1
+17,Mom,29,naive_baseline,0.0018000000636675395,Dispatched: whatsapp://send?phone=Mom&text=Please call me back when free,0
+17,UnknownPersonX,21,rufus_whatsapp_mcp,6.779199999982666,"I don't have a phone number for 'Unknownpersonx' in my address book. Please tell me: 'Save Unknownpersonx's number as +91...' (with their phone number), and I will save it and send your message immediately.",1
+17,UnknownPersonX,21,naive_baseline,0.002200000380980782,Dispatched: whatsapp://send?phone=UnknownPersonX&text=Can we meet tomorrow?,0
+17,+1234567890,12,rufus_whatsapp_mcp,0.013799999578623101,Please specify a recipient name or phone number.,1
+17,+1234567890,12,naive_baseline,0.0013999997463542968,Dispatched: whatsapp://send?phone=1234567890&text=Test message,0
+17,+919876543210,0,rufus_whatsapp_mcp,0.0010999992809956893,Message content cannot be empty.,1
+17,+919876543210,0,naive_baseline,0.0006999998731771484,Dispatched: whatsapp://send?phone=919876543210&text=,0
+18,+919876543210,29,rufus_whatsapp_mcp,2.8352999997878214,Message sent to +919876543210 (+919876543210): 'Arrived safely at the station'.,1
+18,+919876543210,29,naive_baseline,0.0012999998943996616,Dispatched: whatsapp://send?phone=919876543210&text=Arrived safely at the station,1
+18,Mom,29,rufus_whatsapp_mcp,11.17659999999887,Message sent to Mom (+919876543210): 'Please call me back when free'.,1
+18,Mom,29,naive_baseline,0.0035000002753804438,Dispatched: whatsapp://send?phone=Mom&text=Please call me back when free,0
+18,UnknownPersonX,21,rufus_whatsapp_mcp,7.948800000121992,"I don't have a phone number for 'Unknownpersonx' in my address book. Please tell me: 'Save Unknownpersonx's number as +91...' (with their phone number), and I will save it and send your message immediately.",1
+18,UnknownPersonX,21,naive_baseline,0.002499999936844688,Dispatched: whatsapp://send?phone=UnknownPersonX&text=Can we meet tomorrow?,0
+18,+1234567890,12,rufus_whatsapp_mcp,0.019999999494757503,Please specify a recipient name or phone number.,1
+18,+1234567890,12,naive_baseline,0.001499999598308932,Dispatched: whatsapp://send?phone=1234567890&text=Test message,0
+18,+919876543210,0,rufus_whatsapp_mcp,0.001600000359758269,Message content cannot be empty.,1
+18,+919876543210,0,naive_baseline,0.0012000000424450263,Dispatched: whatsapp://send?phone=919876543210&text=,0
+19,+919876543210,29,rufus_whatsapp_mcp,3.9523999994344194,Message sent to +919876543210 (+919876543210): 'Arrived safely at the station'.,1
+19,+919876543210,29,naive_baseline,0.001600000359758269,Dispatched: whatsapp://send?phone=919876543210&text=Arrived safely at the station,1
+19,Mom,29,rufus_whatsapp_mcp,12.699099999736063,Message sent to Mom (+919876543210): 'Please call me back when free'.,1
+19,Mom,29,naive_baseline,0.0017000002117129043,Dispatched: whatsapp://send?phone=Mom&text=Please call me back when free,0
+19,UnknownPersonX,21,rufus_whatsapp_mcp,6.75870000031864,"I don't have a phone number for 'Unknownpersonx' in my address book. Please tell me: 'Save Unknownpersonx's number as +91...' (with their phone number), and I will save it and send your message immediately.",1
+19,UnknownPersonX,21,naive_baseline,0.002599999788799323,Dispatched: whatsapp://send?phone=UnknownPersonX&text=Can we meet tomorrow?,0
+19,+1234567890,12,rufus_whatsapp_mcp,0.02029999996011611,Please specify a recipient name or phone number.,1
+19,+1234567890,12,naive_baseline,0.0015999994502635673,Dispatched: whatsapp://send?phone=1234567890&text=Test message,0
+19,+919876543210,0,rufus_whatsapp_mcp,0.0013999997463542968,Message content cannot be empty.,1
+19,+919876543210,0,naive_baseline,0.001100000190490391,Dispatched: whatsapp://send?phone=919876543210&text=,0
+20,+919876543210,29,rufus_whatsapp_mcp,3.9460999996663304,Message sent to +919876543210 (+919876543210): 'Arrived safely at the station'.,1
+20,+919876543210,29,naive_baseline,0.0012999998943996616,Dispatched: whatsapp://send?phone=919876543210&text=Arrived safely at the station,1
+20,Mom,29,rufus_whatsapp_mcp,13.487199999872246,Message sent to Mom (+919876543210): 'Please call me back when free'.,1
+20,Mom,29,naive_baseline,0.0017000002117129043,Dispatched: whatsapp://send?phone=Mom&text=Please call me back when free,0
+20,UnknownPersonX,21,rufus_whatsapp_mcp,7.503699999688251,"I don't have a phone number for 'Unknownpersonx' in my address book. Please tell me: 'Save Unknownpersonx's number as +91...' (with their phone number), and I will save it and send your message immediately.",1
+20,UnknownPersonX,21,naive_baseline,0.0024000000848900527,Dispatched: whatsapp://send?phone=UnknownPersonX&text=Can we meet tomorrow?,0
+20,+1234567890,12,rufus_whatsapp_mcp,0.019299999621580355,Please specify a recipient name or phone number.,1
+20,+1234567890,12,naive_baseline,0.0012999998943996616,Dispatched: whatsapp://send?phone=1234567890&text=Test message,0
+20,+919876543210,0,rufus_whatsapp_mcp,0.0017000002117129043,Message content cannot be empty.,1
+20,+919876543210,0,naive_baseline,0.0009000004865811206,Dispatched: whatsapp://send?phone=919876543210&text=,0
+21,+919876543210,29,rufus_whatsapp_mcp,2.933199999461067,Message sent to +919876543210 (+919876543210): 'Arrived safely at the station'.,1
+21,+919876543210,29,naive_baseline,0.0012999998943996616,Dispatched: whatsapp://send?phone=919876543210&text=Arrived safely at the station,1
+21,Mom,29,rufus_whatsapp_mcp,10.468700000274112,Message sent to Mom (+919876543210): 'Please call me back when free'.,1
+21,Mom,29,naive_baseline,0.002200000380980782,Dispatched: whatsapp://send?phone=Mom&text=Please call me back when free,0
+21,UnknownPersonX,21,rufus_whatsapp_mcp,8.206299999983457,"I don't have a phone number for 'Unknownpersonx' in my address book. Please tell me: 'Save Unknownpersonx's number as +91...' (with their phone number), and I will save it and send your message immediately.",1
+21,UnknownPersonX,21,naive_baseline,0.0023000002329354174,Dispatched: whatsapp://send?phone=UnknownPersonX&text=Can we meet tomorrow?,0
+21,+1234567890,12,rufus_whatsapp_mcp,0.01759999940986745,Please specify a recipient name or phone number.,1
+21,+1234567890,12,naive_baseline,0.0015999994502635673,Dispatched: whatsapp://send?phone=1234567890&text=Test message,0
+21,+919876543210,0,rufus_whatsapp_mcp,0.0012000000424450263,Message content cannot be empty.,1
+21,+919876543210,0,naive_baseline,0.001100000190490391,Dispatched: whatsapp://send?phone=919876543210&text=,0
+22,+919876543210,29,rufus_whatsapp_mcp,3.321199999845703,Message sent to +919876543210 (+919876543210): 'Arrived safely at the station'.,1
+22,+919876543210,29,naive_baseline,0.0007999997251317836,Dispatched: whatsapp://send?phone=919876543210&text=Arrived safely at the station,1
+22,Mom,29,rufus_whatsapp_mcp,11.254999999437132,Message sent to Mom (+919876543210): 'Please call me back when free'.,1
+22,Mom,29,naive_baseline,0.0012999998943996616,Dispatched: whatsapp://send?phone=Mom&text=Please call me back when free,0
+22,UnknownPersonX,21,rufus_whatsapp_mcp,8.614999999736028,"I don't have a phone number for 'Unknownpersonx' in my address book. Please tell me: 'Save Unknownpersonx's number as +91...' (with their phone number), and I will save it and send your message immediately.",1
+22,UnknownPersonX,21,naive_baseline,0.0024000000848900527,Dispatched: whatsapp://send?phone=UnknownPersonX&text=Can we meet tomorrow?,0
+22,+1234567890,12,rufus_whatsapp_mcp,0.014000000192027073,Please specify a recipient name or phone number.,1
+22,+1234567890,12,naive_baseline,0.001100000190490391,Dispatched: whatsapp://send?phone=1234567890&text=Test message,0
+22,+919876543210,0,rufus_whatsapp_mcp,0.001100000190490391,Message content cannot be empty.,1
+22,+919876543210,0,naive_baseline,0.0006999998731771484,Dispatched: whatsapp://send?phone=919876543210&text=,0
+23,+919876543210,29,rufus_whatsapp_mcp,2.990900000440888,Message sent to +919876543210 (+919876543210): 'Arrived safely at the station'.,1
+23,+919876543210,29,naive_baseline,0.0012999998943996616,Dispatched: whatsapp://send?phone=919876543210&text=Arrived safely at the station,1
+23,Mom,29,rufus_whatsapp_mcp,12.203999999655935,Message sent to Mom (+919876543210): 'Please call me back when free'.,1
+23,Mom,29,naive_baseline,0.0015000005078036338,Dispatched: whatsapp://send?phone=Mom&text=Please call me back when free,0
+23,UnknownPersonX,21,rufus_whatsapp_mcp,7.936799999697541,"I don't have a phone number for 'Unknownpersonx' in my address book. Please tell me: 'Save Unknownpersonx's number as +91...' (with their phone number), and I will save it and send your message immediately.",1
+23,UnknownPersonX,21,naive_baseline,0.0028000004022032954,Dispatched: whatsapp://send?phone=UnknownPersonX&text=Can we meet tomorrow?,0
+23,+1234567890,12,rufus_whatsapp_mcp,0.019799999790848233,Please specify a recipient name or phone number.,1
+23,+1234567890,12,naive_baseline,0.0016999993022182025,Dispatched: whatsapp://send?phone=1234567890&text=Test message,0
+23,+919876543210,0,rufus_whatsapp_mcp,0.0015000005078036338,Message content cannot be empty.,1
+23,+919876543210,0,naive_baseline,0.0014000006558489986,Dispatched: whatsapp://send?phone=919876543210&text=,0
+24,+919876543210,29,rufus_whatsapp_mcp,4.100000000107684,Message sent to +919876543210 (+919876543210): 'Arrived safely at the station'.,1
+24,+919876543210,29,naive_baseline,0.001499999598308932,Dispatched: whatsapp://send?phone=919876543210&text=Arrived safely at the station,1
+24,Mom,29,rufus_whatsapp_mcp,11.174400000527385,Message sent to Mom (+919876543210): 'Please call me back when free'.,1
+24,Mom,29,naive_baseline,0.0015999994502635673,Dispatched: whatsapp://send?phone=Mom&text=Please call me back when free,0
+24,UnknownPersonX,21,rufus_whatsapp_mcp,7.931500000267988,"I don't have a phone number for 'Unknownpersonx' in my address book. Please tell me: 'Save Unknownpersonx's number as +91...' (with their phone number), and I will save it and send your message immediately.",1
+24,UnknownPersonX,21,naive_baseline,0.0032999996619764715,Dispatched: whatsapp://send?phone=UnknownPersonX&text=Can we meet tomorrow?,0
+24,+1234567890,12,rufus_whatsapp_mcp,0.020899999981338624,Please specify a recipient name or phone number.,1
+24,+1234567890,12,naive_baseline,0.00470000031782547,Dispatched: whatsapp://send?phone=1234567890&text=Test message,0
+24,+919876543210,0,rufus_whatsapp_mcp,0.0015000005078036338,Message content cannot be empty.,1
+24,+919876543210,0,naive_baseline,0.0012999998943996616,Dispatched: whatsapp://send?phone=919876543210&text=,0
+25,+919876543210,29,rufus_whatsapp_mcp,3.5950000001321314,Message sent to +919876543210 (+919876543210): 'Arrived safely at the station'.,1
+25,+919876543210,29,naive_baseline,0.000999999429041054,Dispatched: whatsapp://send?phone=919876543210&text=Arrived safely at the station,1
+25,Mom,29,rufus_whatsapp_mcp,10.232799999357667,Message sent to Mom (+919876543210): 'Please call me back when free'.,1
+25,Mom,29,naive_baseline,0.001499999598308932,Dispatched: whatsapp://send?phone=Mom&text=Please call me back when free,0
+25,UnknownPersonX,21,rufus_whatsapp_mcp,7.441800000378862,"I don't have a phone number for 'Unknownpersonx' in my address book. Please tell me: 'Save Unknownpersonx's number as +91...' (with their phone number), and I will save it and send your message immediately.",1
+25,UnknownPersonX,21,naive_baseline,0.0021999994714860804,Dispatched: whatsapp://send?phone=UnknownPersonX&text=Can we meet tomorrow?,0
+25,+1234567890,12,rufus_whatsapp_mcp,0.015999999959603883,Please specify a recipient name or phone number.,1
+25,+1234567890,12,naive_baseline,0.0012999998943996616,Dispatched: whatsapp://send?phone=1234567890&text=Test message,0
+25,+919876543210,0,rufus_whatsapp_mcp,0.001499999598308932,Message content cannot be empty.,1
+25,+919876543210,0,naive_baseline,0.0007999997251317836,Dispatched: whatsapp://send?phone=919876543210&text=,0
