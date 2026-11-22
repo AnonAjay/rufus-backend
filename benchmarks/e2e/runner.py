@@ -507,6 +507,7 @@ def main():
         print(f"Launching harness server on {BASE_URL}...")
         env = os.environ.copy()
         env["RUFUS_E2E_PORT"] = str(PORT)
+        env["RUFUS_BACKEND_DIR"] = str(RUFUS_BACKEND_DIR)
         harness_proc = subprocess.Popen(
             [PYTHON_EXE, str(harness_script)],
             stdout=subprocess.PIPE,
